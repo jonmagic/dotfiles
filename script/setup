@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+if ! command -v brew &> /dev/null
+then
+    echo "-> Installing Homebrew"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
 echo "-> Downloading latest antigen.zsh"
 curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh
 
