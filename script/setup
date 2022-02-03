@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+echo "-> Downloading latest antigen.zsh"
+curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh
+
+if [ ! -f ~/.zshrc ]; then
+    echo "-> Copying .zshrc to home folder"
+    cp zshrc.original ~/.zshrc
+    echo
+    echo "Close this terminal and open a new one and run script/setup again from ~/.dotfiles directory."
+    echo
+    exit 1
+fi
+
