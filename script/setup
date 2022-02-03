@@ -18,3 +18,5 @@ if [ ! -f ~/.zshrc ]; then
     exit 1
 fi
 
+echo "-> Importing Terminal themes"
+~/.dotfiles/themes/import.sh
