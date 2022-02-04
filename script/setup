@@ -18,5 +18,13 @@ if [ ! -f ~/.zshrc ]; then
     exit 1
 fi
 
-echo "-> Importing Terminal themes"
-~/.dotfiles/themes/import.sh
+echo "-> Installing homebrew packages"
+brew bundle --file=~/.dotfiles/install/Brewfile
+
+echo "-> Installing homebrew Cask packages"
+brew bundle --file=~/.dotfiles/install/Caskfile
+
+if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
+    echo "-> Importing Terminal themes"
+    ~/.dotfiles/themes/import.sh
+fi

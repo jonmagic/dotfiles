@@ -1,0 +1,8 @@
+# tap "goles/battery"
+tap "homebrew/bundle"
+tap "homebrew/core"
+
+brew "exa"
+brew "gh"
+brew "git"
+brew "grep"
