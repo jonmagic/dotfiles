@@ -1,7 +1,12 @@
 #!/bin/bash
 
-if [[ $OSTYPE == linux* ]]; then
-  sudo chsh -s "$(which zsh)" "$(whoami)"
+exec > >(tee -i $HOME/dotfiles_install.log)
+exec 2>&1
+set -x
+
+if [[ $CODESPACES == true ]]; then
+  rm -f $HOME/.zshrc
+  rm -f $HOME/.gitconfig
 fi
 
 DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )
@@ -60,4 +65,8 @@ if [[ $OSTYPE == darwin* ]]; then
     cd ~/github
     git clone https://github.com/github/vpn
   fi
+fi
+
+if [[ $CODESPACES == true ]]; then
+  sudo chsh -s "$(which zsh)" "$(whoami)"
 fi
