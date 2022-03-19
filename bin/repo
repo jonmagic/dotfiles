@@ -1,6 +1,10 @@
 #!/bin/bash
 
-REPO=$(git config --local --get remote.origin.url)
-BRANCH=$(git branch --show-current)
+if [[ $OSTYPE == darwin* ]]; then
+  REPO=$(git config --local --get remote.origin.url)
+  BRANCH=$(git branch --show-current)
 
-open $REPO/compare/$BRANCH
+  open $REPO/compare/$BRANCH
+else
+  echo "Unavailable on this system"
+fi
