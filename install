@@ -70,4 +70,10 @@ fi
 
 if [[ $CODESPACES == true ]]; then
   sudo chsh -s "$(which zsh)" "$(whoami)"
+
+  curl -XPOST \
+    -H'Content-Type: application/json' \
+    -d'{"token":"$PUSHOVER_TOKEN","user":"$PUSHOVER_KEY","title":"Codespaces","message":"dotfiles install complete"}' \
+    https://api.pushover.net/1/messages.json
+
 fi
