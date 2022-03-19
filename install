@@ -71,6 +71,6 @@ if [[ $CODESPACES == true ]]; then
 
   curl -XPOST \
     -H'Content-Type: application/json' \
-    -d'{"token":"$PUSHOVER_TOKEN","user":"$PUSHOVER_KEY","title":"Codespaces","message":"dotfiles install complete"}' \
+    -d"{\"token\":\"$PUSHOVER_TOKEN\",\"user\":\"$PUSHOVER_KEY\",\"title\":\"$GITHUB_REPOSITORY\",\"message\":\"Codespace $CODESPACE_NAME is ready\"}" \
     https://api.pushover.net/1/messages.json
 fi
