@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+REPO=$(git config --local --get remote.origin.url)
+BRANCH=$(git branch --show-current)
+
+open $REPO/compare/$BRANCH

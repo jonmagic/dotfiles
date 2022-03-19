@@ -1,7 +1,10 @@
 tap "homebrew/cask"
 
+cask "docker"
 cask "google-chrome"
+cask "intellij-idea"
 cask "raycast"
 cask "slack"
 cask "spotify"
+cask "viscosity"
 cask "visual-studio-code"
