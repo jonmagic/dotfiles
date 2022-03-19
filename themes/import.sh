@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 theme=$(<~/.dotfiles/themes/one-dark.xml)
 plutil -replace Window\ Settings.One\ Dark -xml "$theme" ~/Library/Preferences/com.apple.Terminal.plist

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 REPO=$(git config --local --get remote.origin.url)
 BRANCH=$(git branch --show-current)

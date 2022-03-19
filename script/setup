@@ -1,9 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 if [[ $OSTYPE == linux* ]]; then
-  SHELL=$(which zsh)
-  export SHELL=$SHELL
-  exec $SHELL -l
+  sudo chsh -s "$(which zsh)" "$(whoami)"
 fi
 
 DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Cribbed from https://github.com/webpro/dotfiles/blob/master/remote-install.sh
 
