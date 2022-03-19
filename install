@@ -10,7 +10,7 @@ if [[ $CODESPACES == true ]]; then
   rm -f $HOME/.zshrc
 fi
 
-DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )
+DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 if [ ! -d ~/.dotfiles ]; then
   ln -s $DOTFILES_DIR ~/.dotfiles
