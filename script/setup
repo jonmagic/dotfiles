@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
-DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )
-
-if [[ $OSTYPE != darwin* ]]; then
-  echo "-> Updating ~/.bashrc to start zsh"
+if [[ $OSTYPE == linux* ]]; then
   SHELL=$(which zsh)
-  echo "export SHELL=$SHELL" >> ~/.bashrc
-  echo "exec $SHELL -l" >> ~/.bashrc
+  export SHELL=$SHELL
+  exec $SHELL -l
 fi
+
+DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )
 
 if [ ! -d ~/.dotfiles ]; then
   ln -s $DOTFILES_DIR ~/.dotfiles
