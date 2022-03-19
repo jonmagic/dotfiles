@@ -2,18 +2,22 @@
 
 DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )
 
+if [ ! -d ~/.dotfiles ]; then
+  ln -s $DOTFILES_DIR ~/.dotfiles
+fi
+
 if [ ! -f ~/.gitconfig ]; then
   echo "-> Symlinking .gitconfig"
-  ln -s $DOTFILES_DIR/.gitconfig-global ~/.gitconfig
+  ln -s ~/.dotfiles/.gitconfig-global ~/.gitconfig
 fi
 
 if [ ! -f ~/.gitignore ]; then
   echo "-> Symlinking .gitignore"
-  ln -s $DOTFILES_DIR/.gitignore-global ~/.gitignore
+  ln -s ~/.dotfiles/.gitignore-global ~/.gitignore
 fi
 
 echo "-> Downloading latest antigen.zsh"
-curl -sL git.io/antigen > $DOTFILES_DIR/antigen.zsh
+curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh
 
 if [ ! -f ~/.zshrc ]; then
   echo "-> Copying .zshrc to home folder"
@@ -30,16 +34,16 @@ if [[ $OSTYPE == darwin* ]]; then
 
   echo "-> Installing homebrew packages"
   brew update
-  brew bundle --file=$DOTFILES_DIR/install/Brewfile
+  brew bundle --file=~/.dotfiles/install/Brewfile
 
   if [[ $CPUTYPE == arm64 ]]; then
     echo "-> Installing homebrew Cask packages"
-    brew bundle --file=$DOTFILES_DIR/install/Caskfile
+    brew bundle --file=~/.dotfiles/install/Caskfile
   fi
 
   if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
     echo "-> Importing Terminal themes"
-    $DOTFILES_DIR/themes/import.sh
+    ~/.dotfiles/themes/import.sh
   fi
 
   if [ ! -d ~/github ]; then
