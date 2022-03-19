@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )
+
+if [ ! -f ~/.gitconfig ]; then
+  echo "Symlinking .gitconfig"
+  ln -s $DOTFILES_DIR/.gitconfig ~/.gitconfig
+fi
 
 echo "-> Downloading latest antigen.zsh"
-curl -sL git.io/antigen > $SCRIPT_DIR/../antigen.zsh
+curl -sL git.io/antigen > $DOTFILES_DIR/antigen.zsh
 
 if [ ! -f ~/.zshrc ]; then
   echo "-> Copying .zshrc to home folder"
@@ -20,16 +25,16 @@ if [[ $OSTYPE == darwin* ]]; then
 
   echo "-> Installing homebrew packages"
   brew update
-  brew bundle --file=$SCRIPT_DIR/../install/Brewfile
+  brew bundle --file=$DOTFILES_DIR/install/Brewfile
 
   if [[ $CPUTYPE == arm64 ]]; then
     echo "-> Installing homebrew Cask packages"
-    brew bundle --file=$SCRIPT_DIR/../install/Caskfile
+    brew bundle --file=$DOTFILES_DIR/install/Caskfile
   fi
 
   if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
     echo "-> Importing Terminal themes"
-    $SCRIPT_DIR/../themes/import.sh
+    $DOTFILES_DIR/themes/import.sh
   fi
 
   if [ ! -d ~/github ]; then
