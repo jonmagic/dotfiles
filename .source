@@ -2,9 +2,14 @@ source $HOME/.dotfiles/.path
 source $HOME/.dotfiles/.aliases
 source $HOME/.dotfiles/.env_variables
 source $HOME/.dotfiles/.terminal
-if [[ $OSTYPE == darwin* && $CPUTYPE == arm64 ]]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-else
-  eval "$(/usr/local/Homebrew/bin/brew shellenv)"
+
+if [[ $OSTYPE == darwin* ]]; then
+  if [[ $CPUTYPE == arm64 ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  else
+    eval "$(/usr/local/Homebrew/bin/brew shellenv)"
+  fi
+
+  eval "$(nodenv init -)"
 fi
-eval "$(nodenv init -)"
+

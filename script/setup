@@ -1,43 +1,43 @@
 #!/usr/bin/env bash
 
-if ! command -v brew &> /dev/null
-then
-    echo "-> Installing Homebrew"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-fi
-
 echo "-> Downloading latest antigen.zsh"
 curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh
 
 if [ ! -f ~/.zshrc ]; then
-    echo "-> Copying .zshrc to home folder"
-    cp zshrc.original ~/.zshrc
-    echo
-    echo "Close this terminal and open a new one and run script/setup again from ~/.dotfiles directory."
-    echo
-    exit 1
+  echo "-> Copying .zshrc to home folder"
+  cp zshrc.original ~/.zshrc
+  bash -c zsh
+  source ~/.zshrc
 fi
 
-echo "-> Installing homebrew packages"
-brew bundle --file=~/.dotfiles/install/Brewfile
+if [[ $OSTYPE == darwin* ]]; then
+  if ! command -v brew &> /dev/null; then
+    echo "-> Installing Homebrew"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
 
-if [[ $OSTYPE == darwin* && $CPUTYPE == arm64 ]]; then
+  echo "-> Installing homebrew packages"
+  brew update
+  brew bundle --file=~/.dotfiles/install/Brewfile
+
+  if [[ $CPUTYPE == arm64 ]]; then
     echo "-> Installing homebrew Cask packages"
     brew bundle --file=~/.dotfiles/install/Caskfile
-fi
+  fi
 
-if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
+  if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
     echo "-> Importing Terminal themes"
     ~/.dotfiles/themes/import.sh
-fi
+  fi
 
-if [ ! -d ~/github ]; then
+  if [ ! -d ~/github ]; then
     echo "-> Creating ~/github directory"
     mkdir -p ~/github
-fi
+  fi
 
-if [ ! -d ~/github/vpn ]; then
+  if [ ! -d ~/github/vpn ]; then
     echo "-> Cloning github/vpn"
     cd ~/github
     git clone https://github.com/github/vpn
+  fi
 fi

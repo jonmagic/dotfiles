@@ -1,8 +1,12 @@
 source $HOME/.dotfiles/antigen.zsh
 antigen use oh-my-zsh
 antigen bundle git
-antigen bundle heroku
 antigen bundle command-not-found
 antigen bundle zsh-users/zsh-syntax-highlighting
 antigen theme spaceship-prompt/spaceship-prompt
+
+if [[ $OSTYPE == darwin* ]]; then
+  antigen bundle heroku
+fi
+
 antigen apply

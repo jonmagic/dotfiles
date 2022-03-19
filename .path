@@ -1,1 +1,5 @@
-export PATH=~/.dotfiles/bin:~/.rbenv/shims:~/.nodenv/shims:$PATH
+export PATH=~/.dotfiles/bin:$PATH
+
+if [[ $OSTYPE == darwin* ]]; then
+  export PATH=~/.rbenv/shims:~/.nodenv/shims:$PATH
+fi
