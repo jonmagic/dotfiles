@@ -3,8 +3,13 @@
 DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd ../ &> /dev/null && pwd )
 
 if [ ! -f ~/.gitconfig ]; then
-  echo "Symlinking .gitconfig"
-  ln -s $DOTFILES_DIR/.gitconfig ~/.gitconfig
+  echo "-> Symlinking .gitconfig"
+  ln -s $DOTFILES_DIR/.gitconfig-global ~/.gitconfig
+fi
+
+if [ ! -f ~/.gitignore ]; then
+  echo "-> Symlinking .gitignore"
+  ln -s $DOTFILES_DIR/.gitignore-global ~/.gitignore
 fi
 
 echo "-> Downloading latest antigen.zsh"

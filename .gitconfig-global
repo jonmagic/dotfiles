@@ -1,0 +1,41 @@
+[init]
+	defaultBranch = main
+[user]
+	name = Jonathan Hoyt
+	email = jonmagic@gmail.com
+[core]
+  excludesfile = ~/.gitignore
+  rebase = true
+  editor = code -w
+  whitespace = trailing-space,space-before-tab
+[alias]
+  co = checkout
+  st = status
+  ci = commit
+  br = branch
+  cp = cherry-pick
+  wtf = blame
+  cb = !sh -c 'git branch --merged main | grep -v main | xargs git branch -d'
+  cbo = !sh -c 'git branch --merged master | grep -v master | xargs git branch -d'
+[apply]
+  whitespace = nowarn
+[color]
+  diff = true
+  status = true
+  branch = true
+  interactive = true
+  ui = true
+[push]
+  default = matching
+[branch]
+  autosetuprebase = always
+  autosetupmerge = true
+[github]
+	user = jonmagic
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[includeIf "gitdir:/Users/jonmagic/"]
+  path = ~/.dotfiles/.gitconfig-macos
