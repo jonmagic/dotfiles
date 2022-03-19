@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 echo "-> Downloading latest antigen.zsh"
-curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh
+curl -sL git.io/antigen > $SCRIPT_DIR/../antigen.zsh
 
 if [ ! -f ~/.zshrc ]; then
   echo "-> Copying .zshrc to home folder"
@@ -18,16 +20,16 @@ if [[ $OSTYPE == darwin* ]]; then
 
   echo "-> Installing homebrew packages"
   brew update
-  brew bundle --file=~/.dotfiles/install/Brewfile
+  brew bundle --file=$SCRIPT_DIR/../install/Brewfile
 
   if [[ $CPUTYPE == arm64 ]]; then
     echo "-> Installing homebrew Cask packages"
-    brew bundle --file=~/.dotfiles/install/Caskfile
+    brew bundle --file=$SCRIPT_DIR/../install/Caskfile
   fi
 
   if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
     echo "-> Importing Terminal themes"
-    ~/.dotfiles/themes/import.sh
+    $SCRIPT_DIR/../themes/import.sh
   fi
 
   if [ ! -d ~/github ]; then
