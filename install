@@ -31,9 +31,7 @@ curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh
 
 if [ ! -f ~/.zshrc ]; then
   echo "-> Copying .zshrc to home folder"
-  cp zshrc.original ~/.zshrc
-  bash -c zsh
-  source ~/.zshrc
+  cp ~/.dotfiles/zshrc.original ~/.zshrc
 fi
 
 if [[ $OSTYPE == darwin* ]]; then
@@ -75,5 +73,4 @@ if [[ $CODESPACES == true ]]; then
     -H'Content-Type: application/json' \
     -d'{"token":"$PUSHOVER_TOKEN","user":"$PUSHOVER_KEY","title":"Codespaces","message":"dotfiles install complete"}' \
     https://api.pushover.net/1/messages.json
-
 fi
