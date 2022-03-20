@@ -8,7 +8,7 @@ fi
 set -x
 
 rm -f $HOME/.gitconfig
-rm -f $HOME/.oh-my-zsh
+rm -rf $HOME/.oh-my-zsh
 rm -f $HOME/.zshrc
 
 DOTFILES_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
