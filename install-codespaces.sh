@@ -17,15 +17,7 @@ if [ ! -d ~/.dotfiles ]; then
   ln -s $DOTFILES_DIR ~/.dotfiles
 fi
 
-if [ ! -f ~/.gitconfig ]; then
-  echo "-> Symlinking .gitconfig"
-  ln -s ~/.dotfiles/.gitconfig-global ~/.gitconfig
-fi
-
-if [ ! -f ~/.gitignore ]; then
-  echo "-> Symlinking .gitignore"
-  ln -s ~/.dotfiles/.gitignore-global ~/.gitignore
-fi
+~/.dotfiles/gitconfig/setup.sh
 
 echo "-> Downloading latest antigen.zsh"
 curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh

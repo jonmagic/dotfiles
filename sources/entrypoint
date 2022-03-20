@@ -1,7 +1,7 @@
-source $HOME/.dotfiles/.path
-source $HOME/.dotfiles/.aliases
-source $HOME/.dotfiles/.env_variables
-source $HOME/.dotfiles/.terminal
+source $HOME/.dotfiles/sources/path
+source $HOME/.dotfiles/sources/aliases
+source $HOME/.dotfiles/sources/env_variables
+source $HOME/.dotfiles/sources/terminal
 
 if [[ $OSTYPE == darwin* ]]; then
   if [[ $CPUTYPE == arm64 ]]; then

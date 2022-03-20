@@ -2,9 +2,9 @@
 
 if [[ -n "$CODESPACES" ]]
 then
-  install-codespaces.sh
+  ./install-codespaces.sh
 elif [[ $OSTYPE == darwin* ]]; then
-  install-macos.sh
+  ./install-macos.sh
 else
   echo "Unsupported operating system: $OSTYPE"
 fi
