@@ -24,7 +24,7 @@ curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh
 
 if [ ! -f ~/.zshrc ]; then
   echo "-> Copying .zshrc to home folder"
-  cp ~/.dotfiles/zshrc.original ~/.zshrc
+  cp ~/.dotfiles/sources/zshrc ~/.zshrc
 fi
 
 sudo chsh -s "$(which zsh)" "$(whoami)"
