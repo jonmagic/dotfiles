@@ -2,14 +2,16 @@ source $HOME/.dotfiles/sources/path
 source $HOME/.dotfiles/sources/aliases
 source $HOME/.dotfiles/sources/env_variables
 source $HOME/.dotfiles/sources/terminal
+source /opt/homebrew/opt/asdf/libexec/asdf.sh
+source $HOME/.cargo/env
+source $HOME/.asdf/plugins/java/set-java-home.zsh
+complete -o nospace -C /opt/homebrew/Cellar/tfenv/2.2.3/versions/1.2.3/terraform terraform
 
-if [[ $OSTYPE == darwin* ]]; then
-  if [[ $CPUTYPE == arm64 ]]; then
+if [[ $OSTYPE = darwin* ]]; then
+  if [[ $CPUTYPE -eq arm64 ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
   else
-    eval "$(/usr/local/Homebrew/bin/brew shellenv)"
+    echo "brew not installed in intel arch"
   fi
-
-  eval "$(nodenv init -)"
 fi
 

@@ -30,7 +30,7 @@ echo "-> Installing homebrew packages"
 brew update
 brew bundle --file=~/.dotfiles/brew/Brewfile
 
-if [[ $CPUTYPE == arm64 ]]; then
+if [[ $CPUTYPE -eq arm64 ]]; then
   echo "-> Installing homebrew Cask packages"
   brew bundle --file=~/.dotfiles/brew/Caskfile
 fi

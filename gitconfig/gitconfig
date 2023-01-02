@@ -39,3 +39,7 @@
 	required = true
 [includeIf "gitdir:/Users/jonmagic/"]
   path = ~/.dotfiles/gitconfig/macos
+[commit]
+	gpgsign = true
+[credential]
+	helper = osxkeychain

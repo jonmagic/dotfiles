@@ -1,5 +1,3 @@
-[credential]
-	helper = osxkeychain
 [maintenance]
 	repo = /usr/local/Homebrew
 	repo = /opt/Homebrew

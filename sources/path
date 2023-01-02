@@ -1,4 +1,4 @@
-export PATH=~/.dotfiles/bin:$PATH
+export PATH=~/.dotfiles/bin:/opt/homebrew/opt/openjdk/bin:/opt/homebrew/opt/mysql@5.7/bin:$PATH
 
 if [[ $OSTYPE == darwin* ]]; then
   export PATH=~/.rbenv/shims:~/.nodenv/shims:$PATH
