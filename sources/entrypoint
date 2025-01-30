@@ -1,11 +1,13 @@
 source $HOME/.dotfiles/sources/path
 source $HOME/.dotfiles/sources/aliases
+source $HOME/.dotfiles/sources/functions.zsh
 source $HOME/.dotfiles/sources/env_variables
 source $HOME/.dotfiles/sources/terminal
 source /opt/homebrew/opt/asdf/libexec/asdf.sh
-source $HOME/.cargo/env
+# source $HOME/.config/op/plugins.sh
+# source $HOME/.cargo/env
 source $HOME/.asdf/plugins/java/set-java-home.zsh
-complete -o nospace -C /opt/homebrew/Cellar/tfenv/2.2.3/versions/1.2.3/terraform terraform
+autoload -U +X bashcompinit && bashcompinit
 
 if [[ $OSTYPE = darwin* ]]; then
   if [[ $CPUTYPE -eq arm64 ]]; then
@@ -15,3 +17,4 @@ if [[ $OSTYPE = darwin* ]]; then
   fi
 fi
 
+eval "$(gh copilot alias -- zsh)"

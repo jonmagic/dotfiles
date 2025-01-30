@@ -2,5 +2,5 @@ alias bx="bundle exec"
 
 if [[ $OSTYPE == darwin* ]]; then
   alias e=code
-  alias ls=exa
+  alias ee=code-insiders
 fi

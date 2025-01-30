@@ -1,1 +1,2 @@
 export RUBY_CFLAGS="-Wno-error=implicit-function-declaration"
+export GPG_TTY=$(tty)
