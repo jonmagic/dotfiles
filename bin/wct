@@ -1,0 +1,22 @@
+#!/bin/bash
+
+CONFIG_DIR="$HOME/.dotfiles/webcam"
+BAW_CONFIG=$(cat "$CONFIG_DIR/c920_baw.json")
+COLOR_CONFIG=$(cat "$CONFIG_DIR/c920_color.json")
+STATE_FILE="$CONFIG_DIR/.current_state"
+
+if [[ ! -f $STATE_FILE ]]; then
+  echo "baw" > $STATE_FILE
+fi
+
+CURRENT_STATE=$(cat $STATE_FILE)
+
+if [[ $CURRENT_STATE == "baw" ]]; then
+  echo "Switching to color configuration"
+  echo "$COLOR_CONFIG" | uvcc import
+  echo "color" > $STATE_FILE
+else
+  echo "Switching to black and white configuration"
+  echo "$BAW_CONFIG" | uvcc import
+  echo "baw" > $STATE_FILE
+fi
