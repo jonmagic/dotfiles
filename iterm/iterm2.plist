@@ -1,0 +1,1194 @@
+{
+    "AI Prompt" = "Return commands suitable for copy/pasting into \\\\(shell) on \\\\(uname). Do NOT include commentary NOR Markdown triple-backtick code blocks as your whole response will be copied into my terminal automatically.\\n\\nThe script should do this: \\\\(ai.prompt)";
+    AiMaxTokens = 128000;
+    AiModel = "gpt-4o";
+    AppleAntiAliasingThreshold = 1;
+    ApplePressAndHoldEnabled = 0;
+    AppleScrollAnimationEnabled = 0;
+    AppleSmoothFixedFontsSizeThreshold = 1;
+    AppleWindowTabbingMode = manual;
+    "Default Arrangement Name" = Default;
+    "Default Bookmark Guid" = "B3FC4DC2-B3F5-4003-BB56-3EDACE259F36";
+    HapticFeedbackForEsc = 0;
+    HotkeyMigratedFromSingleToMulti = 1;
+    IRMemory = 4;
+    NSOverlayScrollersFallBackForAccessoryViews = 0;
+    NSQuotedKeystrokeBinding = "";
+    NSRepeatCountBinding = "";
+    NSScrollAnimationEnabled = 0;
+    NSScrollViewShouldScrollUnderTitlebar = 0;
+    "NSSplitView Subview Frames NSColorPanelSplitView" =     (
+        "0.000000, 0.000000, 224.000000, 258.000000, NO, NO",
+        "0.000000, 259.000000, 224.000000, 48.000000, NO, NO"
+    );
+    "NSToolbar Configuration com.apple.NSColorPanel" =     {
+        "TB Is Shown" = 1;
+    };
+    "NSWindow Frame NSColorPanel" = "935 217 224 278 0 0 3200 1325 ";
+    "NSWindow Frame SUStatusFrame" = "556 606 400 135 0 0 1512 944 ";
+    "NSWindow Frame SUUpdateAlert" = "446 409 620 398 0 0 1512 944 ";
+    "NSWindow Frame iTerm Window 0" = "0 0 1595 1325 0 0 3200 1325 ";
+    "NSWindow Frame iTerm Window 1" = "1067 0 1066 1325 0 0 3200 1325 ";
+    "NSWindow Frame iTerm Window 2" = "1067 0 1066 1325 0 0 3200 1325 ";
+    "NSWindow Frame iTerm Window 3" = "1067 0 1066 1325 0 0 3200 1325 ";
+    "NSWindow Frame iTerm Window 4" = "1067 0 1066 1325 0 0 3200 1325 ";
+    "NSWindow Frame iTerm Window 5" = "1067 0 1066 1325 0 0 3200 1325 ";
+    "NSWindow Frame iTerm Window 6" = "55 23 1457 921 0 0 1512 944 ";
+    "NSWindow Frame iTerm Window 7" = "282 386 810 558 0 0 1512 944 ";
+    "New Bookmarks" =     (
+                {
+            "ASCII Anti Aliased" = 1;
+            "AWDS Pane Directory" = "";
+            "AWDS Pane Option" = Recycle;
+            "AWDS Tab Directory" = "";
+            "AWDS Tab Option" = Recycle;
+            "AWDS Window Directory" = "";
+            "AWDS Window Option" = No;
+            "Ambiguous Double Width" = 0;
+            "Ansi 0 Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Ansi 0 Color (Dark)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Ansi 0 Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Ansi 1 Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 1 Color (Dark)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 1 Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 10 Color" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = 1;
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 10 Color (Dark)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = 1;
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 10 Color (Light)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = 1;
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 11 Color" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Ansi 11 Color (Dark)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Ansi 11 Color (Light)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Ansi 12 Color" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 12 Color (Dark)" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 12 Color (Light)" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 13 Color" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = 1;
+            };
+            "Ansi 13 Color (Dark)" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = 1;
+            };
+            "Ansi 13 Color (Light)" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = 1;
+            };
+            "Ansi 14 Color" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 14 Color (Dark)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 14 Color (Light)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 15 Color" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Ansi 15 Color (Dark)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Ansi 15 Color (Light)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Ansi 2 Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = 0;
+            };
+            "Ansi 2 Color (Dark)" =             {
+                "Blue Component" = 0;
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = 0;
+            };
+            "Ansi 2 Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = 0;
+            };
+            "Ansi 3 Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 3 Color (Dark)" =             {
+                "Blue Component" = 0;
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 3 Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 4 Color" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Ansi 4 Color (Dark)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Ansi 4 Color (Light)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Ansi 5 Color" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = 0;
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 5 Color (Dark)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = 0;
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 5 Color (Light)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = 0;
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 6 Color" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = 0;
+            };
+            "Ansi 6 Color (Dark)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = 0;
+            };
+            "Ansi 6 Color (Light)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = 0;
+            };
+            "Ansi 7 Color" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 7 Color (Dark)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 7 Color (Light)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Ansi 8 Color" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 8 Color (Dark)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 8 Color (Light)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = "0.3333333432674408";
+            };
+            "Ansi 9 Color" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = 1;
+            };
+            "Ansi 9 Color (Dark)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = 1;
+            };
+            "Ansi 9 Color (Light)" =             {
+                "Blue Component" = "0.3333333432674408";
+                "Green Component" = "0.3333333432674408";
+                "Red Component" = 1;
+            };
+            "BM Growl" = 1;
+            "Background Color" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Background Color (Dark)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Background Color (Light)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Background Image Location" = "";
+            "Badge Color" =             {
+                "Alpha Component" = "0.5";
+                "Blue Component" = 0;
+                "Color Space" = sRGB;
+                "Green Component" = "0.1491314172744751";
+                "Red Component" = 1;
+            };
+            "Badge Color (Dark)" =             {
+                "Alpha Component" = "0.5";
+                "Blue Component" = 0;
+                "Color Space" = sRGB;
+                "Green Component" = "0.1491314172744751";
+                "Red Component" = 1;
+            };
+            "Badge Color (Light)" =             {
+                "Alpha Component" = "0.5";
+                "Blue Component" = 0;
+                "Color Space" = sRGB;
+                "Green Component" = "0.1491314172744751";
+                "Red Component" = 1;
+            };
+            "Blinking Cursor" = 0;
+            Blur = 0;
+            "Bold Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Bold Color (Dark)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Bold Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Brighten Bold Text" = 1;
+            "Brighten Bold Text (Dark)" = 1;
+            "Brighten Bold Text (Light)" = 1;
+            "Character Encoding" = 4;
+            "Close Sessions On End" = 1;
+            Columns = 80;
+            Command = "";
+            "Cursor Boost" = 0;
+            "Cursor Boost (Dark)" = 0;
+            "Cursor Boost (Light)" = 0;
+            "Cursor Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Cursor Color (Dark)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Cursor Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Cursor Guide Color" =             {
+                "Alpha Component" = "0.25";
+                "Blue Component" = 1;
+                "Color Space" = sRGB;
+                "Green Component" = "0.9268307089805603";
+                "Red Component" = "0.7021318674087524";
+            };
+            "Cursor Guide Color (Dark)" =             {
+                "Alpha Component" = "0.25";
+                "Blue Component" = 1;
+                "Color Space" = sRGB;
+                "Green Component" = "0.9268307089805603";
+                "Red Component" = "0.7021318674087524";
+            };
+            "Cursor Guide Color (Light)" =             {
+                "Alpha Component" = "0.25";
+                "Blue Component" = 1;
+                "Color Space" = sRGB;
+                "Green Component" = "0.9268307089805603";
+                "Red Component" = "0.7021318674087524";
+            };
+            "Cursor Text Color" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Cursor Text Color (Dark)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Cursor Text Color (Light)" =             {
+                "Blue Component" = 1;
+                "Green Component" = 1;
+                "Red Component" = 1;
+            };
+            "Custom Command" = No;
+            "Custom Directory" = Advanced;
+            "Default Bookmark" = No;
+            Description = Default;
+            "Disable Window Resizing" = 1;
+            "Faint Text Alpha" = "0.5";
+            "Faint Text Alpha (Dark)" = "0.5";
+            "Faint Text Alpha (Light)" = "0.5";
+            "Flashing Bell" = 0;
+            "Foreground Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Foreground Color (Dark)" =             {
+                "Blue Component" = "0.7333333492279053";
+                "Green Component" = "0.7333333492279053";
+                "Red Component" = "0.7333333492279053";
+            };
+            "Foreground Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            Guid = "B3FC4DC2-B3F5-4003-BB56-3EDACE259F36";
+            "Horizontal Spacing" = 1;
+            "Idle Code" = 0;
+            "Jobs to Ignore" =             (
+                rlogin,
+                ssh,
+                slogin,
+                telnet
+            );
+            "Keyboard Map" =             {
+            };
+            "Link Color" =             {
+                "Alpha Component" = 1;
+                "Blue Component" = "0.734233021736145";
+                "Color Space" = sRGB;
+                "Green Component" = "0.3591606020927429";
+                "Red Component" = 0;
+            };
+            "Link Color (Dark)" =             {
+                "Alpha Component" = 1;
+                "Blue Component" = "0.734233021736145";
+                "Color Space" = sRGB;
+                "Green Component" = "0.3591606020927429";
+                "Red Component" = 0;
+            };
+            "Link Color (Light)" =             {
+                "Alpha Component" = 1;
+                "Blue Component" = "0.734233021736145";
+                "Color Space" = sRGB;
+                "Green Component" = "0.3591606020927429";
+                "Red Component" = 0;
+            };
+            "Match Background Color" =             {
+                "Alpha Component" = 1;
+                "Blue Component" = "0.3211612701416016";
+                "Color Space" = P3;
+                "Green Component" = "0.9860088229179382";
+                "Red Component" = "0.9969714283943176";
+            };
+            "Match Background Color (Dark)" =             {
+                "Alpha Component" = 1;
+                "Blue Component" = 1;
+                "Color Space" = P3;
+                "Green Component" = 1;
+                "Red Component" = "0.9999999403953552";
+            };
+            "Match Background Color (Light)" =             {
+                "Alpha Component" = 1;
+                "Blue Component" = "0.3211612701416016";
+                "Color Space" = P3;
+                "Green Component" = "0.9860088229179382";
+                "Red Component" = "0.9969714283943176";
+            };
+            "Minimum Contrast" = 0;
+            "Minimum Contrast (Dark)" = 0;
+            "Minimum Contrast (Light)" = 0;
+            "Mouse Reporting" = 1;
+            Name = Default;
+            "Non Ascii Font" = "Monaco 12";
+            "Non-ASCII Anti Aliased" = 1;
+            "Normal Font" = "DepartureMono-Regular 16";
+            "Option Key Sends" = 0;
+            "Prompt Before Closing 2" = 0;
+            "Right Option Key Sends" = 0;
+            Rows = 25;
+            Screen = "-1";
+            "Scrollback Lines" = 0;
+            "Selected Text Color" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Selected Text Color (Dark)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Selected Text Color (Light)" =             {
+                "Blue Component" = 0;
+                "Green Component" = 0;
+                "Red Component" = 0;
+            };
+            "Selection Color" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.8353000283241272";
+                "Red Component" = "0.7098000049591064";
+            };
+            "Selection Color (Dark)" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.8353000283241272";
+                "Red Component" = "0.7098000049591064";
+            };
+            "Selection Color (Light)" =             {
+                "Blue Component" = 1;
+                "Green Component" = "0.8353000283241272";
+                "Red Component" = "0.7098000049591064";
+            };
+            "Send Code When Idle" = 0;
+            Shortcut = "";
+            "Silence Bell" = 0;
+            "Smart Cursor Color" = 0;
+            "Smart Cursor Color (Dark)" = 0;
+            "Smart Cursor Color (Light)" = 0;
+            "Sync Title" = 0;
+            Tags =             (
+            );
+            "Terminal Type" = "xterm-256color";
+            Transparency = 0;
+            "Unlimited Scrollback" = 1;
+            "Use Bold Font" = 1;
+            "Use Bright Bold" = 1;
+            "Use Bright Bold (Dark)" = 1;
+            "Use Bright Bold (Light)" = 1;
+            "Use Cursor Guide" = 0;
+            "Use Cursor Guide (Dark)" = 0;
+            "Use Cursor Guide (Light)" = 0;
+            "Use Italic Font" = 1;
+            "Use Non-ASCII Font" = 0;
+            "Use Selected Text Color" = 1;
+            "Use Selected Text Color (Dark)" = 1;
+            "Use Selected Text Color (Light)" = 1;
+            "Use Separate Colors for Light and Dark Mode" = 1;
+            "Use Tab Color" = 0;
+            "Use Tab Color (Dark)" = 0;
+            "Use Tab Color (Light)" = 0;
+            "Use Underline Color" = 0;
+            "Use Underline Color (Dark)" = 0;
+            "Use Underline Color (Light)" = 0;
+            "Vertical Spacing" = 1;
+            "Visual Bell" = 1;
+            "Window Type" = 0;
+            "Working Directory" = "/Users/jonmagic";
+        }
+    );
+    NoSyncAllAppVersions =     (
+        "3.5.5",
+        "3.5.4",
+        "3.4.16",
+        "3.5.10",
+        "3.5.11",
+        "3.5.9"
+    );
+    NoSyncBFPRecents =     (
+        "Departure Mono",
+        Monaco
+    );
+    "NoSyncFrame_SessionsPreferences" =     {
+        screenFrame = "{{1920, 0}, {1920, 1080}}";
+        topLeft = "{2569, 948}";
+    };
+    "NoSyncFrame_SharedPreferences" =     {
+        screenFrame = "{{0, 0}, {3200, 1350}}";
+        topLeft = "{1138, 918}";
+    };
+    NoSyncHaveUsedCopyMode = 1;
+    NoSyncIgnoreSystemWindowRestoration = 1;
+    NoSyncInstallationId = "E9BB596E-9EE7-4043-80B6-9738347D685E";
+    NoSyncLastOSVersion = "Version 15.2 (Build 24C101)";
+    NoSyncLastSystemPythonVersionRequirement = "1.17";
+    NoSyncLaunchExperienceControllerRunCount = 34;
+    NoSyncNeverAskAboutSettingAlternateMouseScroll = 1;
+    NoSyncNextAnnoyanceTime = "747156217.459818";
+    NoSyncOnboardingWindowHasBeenShown34 = 1;
+    NoSyncPermissionToShowTip = 0;
+    NoSyncRecordedVariables =     {
+        0 =         (
+                        {
+                isTerminal = 1;
+                name = "";
+                nonterminalContext = 0;
+            }
+        );
+        1 =         (
+                        {
+                isTerminal = 1;
+                name = presentationName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxRole;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = lastCommand;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = profileName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = showingAlternateScreen;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = id;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = termid;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = homeDirectory;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = jobName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = columns;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "tab.tmuxWindowTitle";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = uname;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = processTitle;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxClientName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = hostname;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = selectionLength;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = mouseInfo;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = path;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = shell;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = triggerName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = parentSession;
+                nonterminalContext = 1;
+            },
+                        {
+                isTerminal = 1;
+                name = terminalIconName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxWindowPane;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxStatusRight;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = mouseReportingMode;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = name;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = iterm2;
+                nonterminalContext = 4;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxPaneTitle;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = rows;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxWindowPaneIndex;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tty;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = autoLogId;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = badge;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = username;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = logFilename;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "tab.tmuxWindowName";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "effective_root_pid";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = sshIntegrationLevel;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = tab;
+                nonterminalContext = 2;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxStatusLeft;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = selection;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = bellCount;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = autoNameFormat;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = autoName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = terminalWindowName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = creationTimeString;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = commandLine;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = applicationKeypad;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = jobPid;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = pid;
+                nonterminalContext = 0;
+            }
+        );
+        16 =         (
+                        {
+                isTerminal = 1;
+                name = style;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = frame;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.pid";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.termid";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.mouseInfo";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.terminalIconName";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.terminalWindowName";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = isHotkeyWindow;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = currentTab;
+                nonterminalContext = 2;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.processTitle";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.window";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = id;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.name";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = titleOverride;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = number;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.commandLine";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.path";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.hostname";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.effective_root_pid";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.tty";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.username";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = iterm2;
+                nonterminalContext = 4;
+            },
+                        {
+                isTerminal = 1;
+                name = titleOverrideFormat;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.bellCount";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentTab.currentSession.jobName";
+                nonterminalContext = 0;
+            }
+        );
+        2 =         (
+                        {
+                isTerminal = 1;
+                name = tmuxWindow;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = currentSession;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.terminalIconName";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = title;
+                nonterminalContext = 1;
+            },
+                        {
+                isTerminal = 1;
+                name = title;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxWindowTitle;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.commandLine";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.jobPid";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.effective_root_pid";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = tmuxWindowName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = window;
+                nonterminalContext = 16;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.tty";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.jobName";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.name";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.processTitle";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = window;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.mouseInfo";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = id;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = titleOverride;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.username";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.bellCount";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.path";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.termid";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = iterm2;
+                nonterminalContext = 4;
+            },
+                        {
+                isTerminal = 1;
+                name = titleOverrideFormat;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.hostname";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.terminalWindowName";
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 0;
+                name = currentSession;
+                nonterminalContext = 1;
+            },
+                        {
+                isTerminal = 1;
+                name = "currentSession.pid";
+                nonterminalContext = 0;
+            }
+        );
+        4 =         (
+                        {
+                isTerminal = 1;
+                name = pid;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = localhostName;
+                nonterminalContext = 0;
+            },
+                        {
+                isTerminal = 1;
+                name = effectiveTheme;
+                nonterminalContext = 0;
+            }
+        );
+    };
+    NoSyncRemoveDeprecatedKeyMappings = 2;
+    NoSyncRestoreWindowsCount = 0;
+    NoSyncTipOfTheDayEligibilityBeganTime = "684890052.980764";
+    NoSyncUserHasSelectedCommand = 1;
+    NoSyncWindowRestoresWorkspaceAtLaunch = 0;
+    OpenArrangementAtStartup = 0;
+    OpenBookmark = 0;
+    OpenNoWindowsAtStartup = 0;
+    PasteTabToStringTabStopSize = 4;
+    PointerActions =     {
+        "Button,1,1,," =         {
+            Action = kContextMenuPointerAction;
+        };
+        "Button,2,1,," =         {
+            Action = kPasteFromClipboardPointerAction;
+        };
+        "Gesture,ThreeFingerSwipeDown,," =         {
+            Action = kPrevWindowPointerAction;
+        };
+        "Gesture,ThreeFingerSwipeLeft,," =         {
+            Action = kPrevTabPointerAction;
+        };
+        "Gesture,ThreeFingerSwipeRight,," =         {
+            Action = kNextTabPointerAction;
+        };
+        "Gesture,ThreeFingerSwipeUp,," =         {
+            Action = kNextWindowPointerAction;
+        };
+    };
+    SUEnableAutomaticChecks = 1;
+    SUFeedAlternateAppNameKey = iTerm;
+    SUFeedURL = "https://iterm2.com/appcasts/final_modern.xml?shard=88";
+    SUHasLaunchedBefore = 1;
+    SULastCheckTime = "2025-02-01 21:06:24 +0000";
+    SUSendProfileInfo = 0;
+    SUUpdateGroupIdentifier = 1195738289;
+    SUUpdateRelaunchingMarker = 0;
+    SoundForEsc = 0;
+    SplitPaneDimmingAmount = "0.3954198270631067";
+    TabStyleWithAutomaticOption = 4;
+    VisualIndicatorForEsc = 0;
+    "Window Arrangements" =     {
+    };
+    "findMode_iTerm" = 0;
+    "iTerm Version" = "3.5.11";
+}
