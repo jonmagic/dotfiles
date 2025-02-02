@@ -30,11 +30,6 @@ echo "-> Installing homebrew packages"
 brew update
 brew bundle --file=~/.dotfiles/brew/Brewfile
 
-if [[ $CPUTYPE -eq arm64 ]]; then
-  echo "-> Installing homebrew Cask packages"
-  brew bundle --file=~/.dotfiles/brew/Caskfile
-fi
-
 if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
   echo "-> Importing Terminal themes"
   ~/.dotfiles/themes/import.sh
