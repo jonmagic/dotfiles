@@ -48,3 +48,8 @@ if [ ! -d ~/github/vpn ]; then
   cd ~/github
   git clone https://github.com/github/vpn
 fi
+
+if [ ! -d ~/.hammerspoon ]; then
+  echo "-> Creating ~/.hammerspoon directory"
+  ln -s ~/.dotfiles/hammerspoon ~/.hammerspoon
+fi
