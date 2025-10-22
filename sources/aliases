@@ -1,21 +1,61 @@
-alias bx="bundle exec"
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
 
-if [[ $OSTYPE == darwin* ]]; then
+executable_exists() {
+  [[ -x "$1" ]]
+}
+
+if command_exists bundle; then
+  alias bx="bundle exec"
+fi
+
+# Visual Studio Code
+if command_exists code; then
   alias e=code
+fi
+
+# Visual Studio Code Insiders
+if command_exists code-insiders; then
   alias ee=code-insiders
 fi
 
-alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+# Tailscale
+if [[ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]]; then
+  alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+fi
 
-alias am='~/code/jonmagic/scripts/bin/archive-meeting --transcripts-dir ~/Documents/Zoom/ --target-dir ~/code/jonmagic/brain --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md'
-alias commit='~/code/jonmagic/scripts/bin/prepare-commit --commit-message-prompt-path ~/code/jonmagic/prompts/generate/commit-message.md'
-alias fgc='~/code/jonmagic/scripts/bin/fetch-github-conversation'
-alias es='llm -f ~/code/jonmagic/prompts/summarize/github-conversation-executive-summary.md'
-alias ppr='~/code/jonmagic/scripts/bin/prepare-pull-request --base-branch main --pr-body-prompt-path ~/code/jonmagic/prompts/generate/pull-request-body.md'
-alias marp='npx @marp-team/marp-cli@latest --html'
-alias gbb='git for-each-ref --sort=-committerdate --format="%(refname:short) - %(committerdate:short) - %(authorname) - %(subject)" refs/heads/ | llm "sort newest to oldest and format as a markdown table"'
+# Archive Zoom meeting
+if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
+  alias am='~/code/jonmagic/scripts/bin/archive-meeting --transcripts-dir ~/Documents/Zoom/ --target-dir ~/code/jonmagic/brain --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md'
+fi
 
-alias sc='codex --provider spamurai-eastus2 --model gpt-4.1'
-alias scr='codex --provider spamurai-eastus2 --model o1'
+# Create semantic commit
+if executable_exists "$HOME/code/jonmagic/scripts/bin/prepare-commit"; then
+  alias commit='~/code/jonmagic/scripts/bin/prepare-commit --commit-message-prompt-path ~/code/jonmagic/prompts/generate/commit-message.md'
+fi
 
-alias fixcs='gh codespace ports visibility 3000:public -c $(gh codespace list --limit 1 --json name -q ".[0].name")'
+# Fetch GitHub conversation
+if executable_exists "$HOME/code/jonmagic/scripts/bin/fetch-github-conversation"; then
+  alias fgc='~/code/jonmagic/scripts/bin/fetch-github-conversation'
+fi
+
+# Summarize GitHub conversation
+if command_exists llm; then
+  alias es='llm -f ~/code/jonmagic/prompts/summarize/github-conversation-executive-summary.md'
+fi
+
+# Prepare Pull Request
+if executable_exists "$HOME/code/jonmagic/scripts/bin/prepare-pull-request"; then
+  alias ppr='~/code/jonmagic/scripts/bin/prepare-pull-request --base-branch main --pr-body-prompt-path ~/code/jonmagic/prompts/generate/pull-request-body.md'
+fi
+
+# Git branches by most recent commit date
+if command_exists git && command_exists llm; then
+  alias gbb='git for-each-ref --sort=-committerdate --format="%(refname:short) - %(committerdate:short) - %(authorname) - %(subject)" refs/heads/ | llm "sort newest to oldest and format as a markdown table"'
+fi
+
+# Fix Codespace port visibility
+if command_exists gh; then
+  alias fixcs='gh codespace ports visibility 3000:public -c $(gh codespace list --limit 1 --json name -q ".[0].name")'
+fi

@@ -1,15 +1,56 @@
-source $HOME/.dotfiles/sources/path
-source $HOME/.dotfiles/sources/aliases
-source $HOME/.dotfiles/sources/functions.zsh
-source $HOME/.dotfiles/sources/env_variables
-source $HOME/.dotfiles/sources/env_secrets
-source $HOME/.dotfiles/sources/terminal
-# source $HOME/.config/op/plugins.sh
-# source $HOME/.cargo/env
-source $HOME/.asdf/plugins/java/set-java-home.zsh
-source $HOME/.local/bin/env
-
 autoload -U +X bashcompinit && bashcompinit
+
+safe_source() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    source "$file"
+    return 0
+  fi
+  return 1
+}
+
+load_asdf() {
+  local asdf_sh=""
+  local candidates=(
+    "$HOME/.asdf/asdf.sh"
+    "$HOME/.asdf/libexec/asdf.sh"
+    "/opt/homebrew/opt/asdf/libexec/asdf.sh"
+    "/usr/local/opt/asdf/libexec/asdf.sh"
+  )
+
+  if command -v brew >/dev/null 2>&1; then
+    local brew_prefix
+    brew_prefix="$(brew --prefix asdf 2>/dev/null)"
+    if [[ -n "$brew_prefix" ]]; then
+      candidates+=("$brew_prefix/libexec/asdf.sh")
+    fi
+  fi
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      asdf_sh="$candidate"
+      break
+    fi
+  done
+
+  if [[ -n "$asdf_sh" ]]; then
+    source "$asdf_sh"
+  fi
+
+  safe_source "$HOME/.asdf/plugins/java/set-java-home.zsh"
+}
+
+safe_source "$HOME/.dotfiles/sources/path"
+safe_source "$HOME/.dotfiles/sources/aliases"
+safe_source "$HOME/.dotfiles/sources/functions.zsh"
+safe_source "$HOME/.dotfiles/sources/env_variables"
+safe_source "$HOME/.dotfiles/sources/env_secrets"
+safe_source "$HOME/.dotfiles/sources/terminal"
+# safe_source $HOME/.config/op/plugins.sh
+# safe_source $HOME/.cargo/env
+
+load_asdf
+safe_source "$HOME/.local/bin/env"
 
 if [[ $OSTYPE = darwin* ]]; then
   if [[ $CPUTYPE -eq arm64 ]]; then

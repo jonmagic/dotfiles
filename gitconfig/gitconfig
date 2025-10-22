@@ -41,10 +41,6 @@
   path = ~/.dotfiles/gitconfig/macos
 [commit]
 	gpgsign = false
-[credential]
-	helper = osxkeychain
-	helper = 
-	helper = /usr/local/share/gcm-core/git-credential-manager
 [credential "https://git.heroku.com"]
 	provider = generic
 [credential "https://ghe.io"]

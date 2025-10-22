@@ -28,3 +28,10 @@ if [ ! -f ~/.zshrc ]; then
 fi
 
 sudo chsh -s "$(which zsh)" "$(whoami)"
+
+if command -v gh >/dev/null 2>&1; then
+  if ! gh extension list 2>/dev/null | grep -q "github/copilot-cli"; then
+    echo "-> Installing GitHub Copilot CLI extension"
+    gh extension install github/copilot-cli || true
+  fi
+fi

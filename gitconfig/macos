@@ -1,3 +1,7 @@
 [maintenance]
 	repo = /usr/local/Homebrew
 	repo = /opt/Homebrew
+
+[credential]
+	helper = osxkeychain
+	helper = manager

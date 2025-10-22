@@ -1,5 +1,22 @@
-export PATH=~/.dotfiles/bin:$PATH
+add_to_path_if_exists() {
+  local dir="$1"
+  if [[ -d "$dir" ]] && [[ ":$PATH:" != *":$dir:"* ]]; then
+    PATH="$dir:$PATH"
+  fi
+}
+
+PATH="$HOME/.dotfiles/bin:$PATH"
+
+if [[ -n "$CODESPACES" ]]; then
+  add_to_path_if_exists "$HOME/.local/bin"
+fi
 
 if [[ $OSTYPE == darwin* ]]; then
-  export PATH=~/.nodenv/shims:$HOME/.asdf/shims:$HOME/.bun/bin:$HOME/.cache/lm-studio/bin:$HOME/code/chromium/depot_tools:$PATH
+  add_to_path_if_exists "$HOME/.nodenv/shims"
+  add_to_path_if_exists "$HOME/.asdf/shims"
+  add_to_path_if_exists "$HOME/.bun/bin"
+  add_to_path_if_exists "$HOME/.cache/lm-studio/bin"
+  add_to_path_if_exists "$HOME/code/chromium/depot_tools"
 fi
+
+export PATH
