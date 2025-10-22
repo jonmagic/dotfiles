@@ -2,3 +2,4 @@
 antigen.zsh
 *.lock.json
 /webcam/.current_state
+/sources/env_secrets

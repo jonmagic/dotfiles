@@ -1,5 +1,5 @@
 export PATH=~/.dotfiles/bin:$PATH
 
 if [[ $OSTYPE == darwin* ]]; then
-  export PATH=~/.nodenv/shims:$PATH
+  export PATH=~/.nodenv/shims:$HOME/.asdf/shims:$HOME/.bun/bin:$HOME/.cache/lm-studio/bin:$HOME/code/chromium/depot_tools:$PATH
 fi

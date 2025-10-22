@@ -2,11 +2,13 @@ source $HOME/.dotfiles/sources/path
 source $HOME/.dotfiles/sources/aliases
 source $HOME/.dotfiles/sources/functions.zsh
 source $HOME/.dotfiles/sources/env_variables
+source $HOME/.dotfiles/sources/env_secrets
 source $HOME/.dotfiles/sources/terminal
-source /opt/homebrew/opt/asdf/libexec/asdf.sh
 # source $HOME/.config/op/plugins.sh
 # source $HOME/.cargo/env
 source $HOME/.asdf/plugins/java/set-java-home.zsh
+source $HOME/.local/bin/env
+
 autoload -U +X bashcompinit && bashcompinit
 
 if [[ $OSTYPE = darwin* ]]; then
@@ -16,5 +18,3 @@ if [[ $OSTYPE = darwin* ]]; then
     echo "brew not installed in intel arch"
   fi
 fi
-
-eval "$(gh copilot alias -- zsh)"

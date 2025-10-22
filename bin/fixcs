@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -e
+
+# Usage:
+#   fixcs           → repairs all forwarded ports
+#   fixcs 3000      → repairs only port 3000
+
+PORTS=()
+
+if [ -n "$1" ]; then
+  PORTS=("$1")
+else
+  echo "🔍 Detecting active forwarded ports from Codespace..."
+  PORTS=($(gh codespace ports list --json port -q '.[].port' 2>/dev/null || true))
+fi
+
+if [ ${#PORTS[@]} -eq 0 ]; then
+  echo "❌ No forwarded ports found. You can specify a port manually, e.g. fixcs 3000"
+  exit 1
+fi
+
+echo "🔧 Killing stale Codespaces port-forwarding processes..."
+for PORT in "${PORTS[@]}"; do
+  lsof -ti :$PORT | xargs kill -9 2>/dev/null || true
+done
+pkill -f "codespaces" 2>/dev/null || true
+
+CODESPACE_NAME=$(gh codespace list --limit 1 --json name -q '.[0].name')
+if [ -z "$CODESPACE_NAME" ]; then
+  echo "❌ No active Codespace found."
+  exit 1
+fi
+
+echo "🔗 Rebuilding SSH config for $CODESPACE_NAME..."
+gh codespace ssh --config > ~/.ssh/codespace_config
+
+for PORT in "${PORTS[@]}"; do
+  echo "🚀 Starting port forward: localhost:$PORT → $CODESPACE_NAME:localhost:$PORT"
+  ssh -f -N -L 127.0.0.1:$PORT:localhost:$PORT -F ~/.ssh/codespace_config "$CODESPACE_NAME"
+  sleep 1
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$PORT || true)
+  if [ "$STATUS" = "200" ]; then
+    echo "✅ Port $PORT restored successfully!"
+  else
+    echo "⚠️  Tunnel active, but port $PORT didn’t respond (code $STATUS)."
+    echo "   Check if your app is running and bound to 0.0.0.0:$PORT inside the Codespace."
+  fi
+done
+
+echo "✨ Done. Reconnected ports: ${PORTS[*]}"

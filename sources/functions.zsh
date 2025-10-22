@@ -12,7 +12,7 @@ function update_software() {
   echo ""
 
   echo "==> Upgrading asdf plugins"
-  asdf plugin-update --all
+  asdf plugin update --all
   echo ""
 
   echo "==> Upgrading homebrew"

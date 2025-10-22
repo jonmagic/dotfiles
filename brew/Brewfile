@@ -8,11 +8,6 @@ tap "heroku/brew"
 tap "homebrew/bundle"
 tap "homebrew/services"
 tap "lencx/chatgpt", "https://github.com/lencx/ChatGPT.git"
-tap "nutcracker/tap"
-tap "planetscale/tap"
-tap "rbenv/tap"
-tap "shaunsingh/sfmono-nerd-font-ligaturized"
-tap "skeema/tap"
 brew "act"
 brew "age"
 brew "giflib"
@@ -62,6 +57,7 @@ brew "pkgconf"
 brew "node-build"
 brew "ollama"
 brew "openblas"
+brew "oven-sh/bun/bun"
 brew "tmux"
 brew "overmind"
 brew "p7zip"
@@ -95,10 +91,7 @@ cask "docker"
 cask "font-sf-mono-nerd-font-ligaturized"
 cask "git-credential-manager"
 cask "google-chrome"
-cask "hammerspoon"
-cask "intellij-idea"
 cask "iterm2"
-cask "kitty"
 cask "orbstack"
 cask "rar"
 cask "raycast"
@@ -109,7 +102,6 @@ cask "viscosity"
 cask "visual-studio-code"
 mas "1Password for Safari", id: 1569813296
 mas "Acorn", id: 6737921844
-mas "Bear", id: 1091189122
 mas "Calca", id: 635758264
 mas "CrystalFetch", id: 6454431289
 mas "DaisyDisk", id: 411643860
@@ -127,7 +119,6 @@ mas "Okta Extension App", id: 1439967473
 mas "Okta Verify", id: 490179405
 mas "Pages", id: 409201541
 mas "Paprika Recipe Manager 3", id: 1303222628
-mas "Tailscale", id: 1475387142
 mas "TestFlight", id: 899247664
 mas "Webcam Effects", id: 1525288396
 mas "Xcode", id: 497799835
