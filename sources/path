@@ -5,8 +5,6 @@ add_to_path_if_exists() {
   fi
 }
 
-PATH="$HOME/.dotfiles/bin:$PATH"
-
 if [[ -n "$CODESPACES" ]]; then
   add_to_path_if_exists "$HOME/.local/bin"
 fi
@@ -18,5 +16,7 @@ if [[ $OSTYPE == darwin* ]]; then
   add_to_path_if_exists "$HOME/.cache/lm-studio/bin"
   add_to_path_if_exists "$HOME/code/chromium/depot_tools"
 fi
+
+PATH="$HOME/.dotfiles/bin:$PATH"
 
 export PATH

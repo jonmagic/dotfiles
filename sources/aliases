@@ -27,7 +27,7 @@ fi
 
 # Archive Zoom meeting
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
-  alias am='~/code/jonmagic/scripts/bin/archive-meeting --transcripts-dir ~/Documents/Zoom/ --target-dir ~/code/jonmagic/brain --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md'
+  alias am='~/code/jonmagic/scripts/bin/archive-meeting --transcripts-dir ~/Documents/Zoom/ --target-dir ~/Dropbox/brain --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md'
 fi
 
 # Create semantic commit

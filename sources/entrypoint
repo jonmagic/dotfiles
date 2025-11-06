@@ -40,15 +40,6 @@ load_asdf() {
   safe_source "$HOME/.asdf/plugins/java/set-java-home.zsh"
 }
 
-safe_source "$HOME/.dotfiles/sources/path"
-safe_source "$HOME/.dotfiles/sources/aliases"
-safe_source "$HOME/.dotfiles/sources/functions.zsh"
-safe_source "$HOME/.dotfiles/sources/env_variables"
-safe_source "$HOME/.dotfiles/sources/env_secrets"
-safe_source "$HOME/.dotfiles/sources/terminal"
-# safe_source $HOME/.config/op/plugins.sh
-# safe_source $HOME/.cargo/env
-
 load_asdf
 safe_source "$HOME/.local/bin/env"
 
@@ -59,3 +50,12 @@ if [[ $OSTYPE = darwin* ]]; then
     echo "brew not installed in intel arch"
   fi
 fi
+
+safe_source "$HOME/.dotfiles/sources/path"
+safe_source "$HOME/.dotfiles/sources/aliases"
+safe_source "$HOME/.dotfiles/sources/functions.zsh"
+safe_source "$HOME/.dotfiles/sources/env_variables"
+safe_source "$HOME/.dotfiles/sources/env_secrets"
+safe_source "$HOME/.dotfiles/sources/terminal"
+# safe_source $HOME/.config/op/plugins.sh
+# safe_source $HOME/.cargo/env
