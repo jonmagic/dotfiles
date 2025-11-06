@@ -1,0 +1,281 @@
+#!/usr/bin/env node
+
+// Embedded @byjohann/toon library (v0.4.0) - https://github.com/johannschopplich/toon
+const TOON = (() => {
+const LIST_ITEM_MARKER = "-";
+const LIST_ITEM_PREFIX = "- ";
+const COMMA = ",";
+const PIPE = "|";
+const NULL_LITERAL = "null";
+const TRUE_LITERAL = "true";
+const FALSE_LITERAL = "false";
+const BACKSLASH = "\\";
+const DOUBLE_QUOTE = '"';
+const TAB = "\t";
+const DELIMITERS = { comma: COMMA, tab: TAB, pipe: PIPE };
+const DEFAULT_DELIMITER = DELIMITERS.comma;
+
+function normalizeValue(value) {
+  if (value === null) return null;
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (Object.is(value, -0)) return 0;
+    if (!Number.isFinite(value)) return null;
+    return value;
+  }
+  if (typeof value === "bigint") {
+    if (value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER) return Number(value);
+    return value.toString();
+  }
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(normalizeValue);
+  if (value instanceof Set) return Array.from(value).map(normalizeValue);
+  if (value instanceof Map) return Object.fromEntries(Array.from(value, ([k, v]) => [String(k), normalizeValue(v)]));
+  if (isPlainObject(value)) {
+    const result = {};
+    for (const key in value) if (Object.prototype.hasOwnProperty.call(value, key)) result[key] = normalizeValue(value[key]);
+    return result;
+  }
+  return null;
+}
+
+function isJsonPrimitive(value) { return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean"; }
+function isJsonArray(value) { return Array.isArray(value); }
+function isJsonObject(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
+function isPlainObject(value) { if (value === null || typeof value !== "object") return false; const prototype = Object.getPrototypeOf(value); return prototype === null || prototype === Object.prototype; }
+function isArrayOfPrimitives(value) { return value.every((item) => isJsonPrimitive(item)); }
+function isArrayOfArrays(value) { return value.every((item) => isJsonArray(item)); }
+function isArrayOfObjects(value) { return value.every((item) => isJsonObject(item)); }
+
+function escapeString(value) { return value.replace(/\\/g, `${BACKSLASH}${BACKSLASH}`).replace(/"/g, `${BACKSLASH}${DOUBLE_QUOTE}`).replace(/\n/g, `${BACKSLASH}n`).replace(/\r/g, `${BACKSLASH}r`).replace(/\t/g, `${BACKSLASH}t`); }
+function isPaddedWithWhitespace(value) { return value !== value.trim(); }
+function isNumericLike(value) { return /^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(value) || /^0\d+$/.test(value); }
+function isSafeUnquoted(value, delimiter = COMMA) {
+  if (!value) return false;
+  if (isPaddedWithWhitespace(value)) return false;
+  if (value === TRUE_LITERAL || value === FALSE_LITERAL || value === NULL_LITERAL) return false;
+  if (isNumericLike(value)) return false;
+  if (value.includes(":")) return false;
+  if (value.includes('"') || value.includes("\\")) return false;
+  if (/[[\]{}]/.test(value)) return false;
+  if (/[\n\r\t]/.test(value)) return false;
+  if (value.includes(delimiter)) return false;
+  if (value.startsWith(LIST_ITEM_MARKER)) return false;
+  return true;
+}
+
+function isValidUnquotedKey(key) { return /^[A-Z_][\w.]*$/i.test(key); }
+function encodePrimitive(value, delimiter) { if (value === null) return NULL_LITERAL; if (typeof value === "boolean") return String(value); if (typeof value === "number") return String(value); return encodeStringLiteral(value, delimiter); }
+function encodeStringLiteral(value, delimiter = COMMA) { if (isSafeUnquoted(value, delimiter)) return value; return `${DOUBLE_QUOTE}${escapeString(value)}${DOUBLE_QUOTE}`; }
+function encodeKey(key) { if (isValidUnquotedKey(key)) return key; return `${DOUBLE_QUOTE}${escapeString(key)}${DOUBLE_QUOTE}`; }
+function encodeAndJoinPrimitives(values, delimiter = COMMA) { return values.map((v) => encodePrimitive(v, delimiter)).join(delimiter); }
+function formatHeader(length, options) {
+  const key = options?.key;
+  const fields = options?.fields;
+  const delimiter = options?.delimiter ?? COMMA;
+  const lengthMarker = options?.lengthMarker ?? false;
+  let header = "";
+  if (key) header += encodeKey(key);
+  header += `[${lengthMarker || ""}${length}${delimiter !== DEFAULT_DELIMITER ? delimiter : ""}]`;
+  if (fields) { const quotedFields = fields.map((f) => encodeKey(f)); header += `{${quotedFields.join(delimiter)}}`; }
+  header += ":";
+  return header;
+}
+
+class LineWriter {
+  lines = [];
+  indentationString;
+  constructor(indentSize) { this.indentationString = " ".repeat(indentSize); }
+  push(depth, content) { const indent = this.indentationString.repeat(depth); this.lines.push(indent + content); }
+  toString() { return this.lines.join("\n"); }
+}
+
+function encodeValue(value, options) {
+  if (isJsonPrimitive(value)) return encodePrimitive(value, options.delimiter);
+  const writer = new LineWriter(options.indent);
+  if (isJsonArray(value)) encodeArray(void 0, value, writer, 0, options);
+  else if (isJsonObject(value)) encodeObject(value, writer, 0, options);
+  return writer.toString();
+}
+
+function encodeObject(value, writer, depth, options) { const keys = Object.keys(value); for (const key of keys) encodeKeyValuePair(key, value[key], writer, depth, options); }
+function encodeKeyValuePair(key, value, writer, depth, options) {
+  const encodedKey = encodeKey(key);
+  if (isJsonPrimitive(value)) writer.push(depth, `${encodedKey}: ${encodePrimitive(value, options.delimiter)}`);
+  else if (isJsonArray(value)) encodeArray(key, value, writer, depth, options);
+  else if (isJsonObject(value)) if (Object.keys(value).length === 0) writer.push(depth, `${encodedKey}:`);
+  else { writer.push(depth, `${encodedKey}:`); encodeObject(value, writer, depth + 1, options); }
+}
+
+function encodeArray(key, value, writer, depth, options) {
+  if (value.length === 0) { const header = formatHeader(0, { key, delimiter: options.delimiter, lengthMarker: options.lengthMarker }); writer.push(depth, header); return; }
+  if (isArrayOfPrimitives(value)) { encodeInlinePrimitiveArray(key, value, writer, depth, options); return; }
+  if (isArrayOfArrays(value)) { if (value.every((arr) => isArrayOfPrimitives(arr))) { encodeArrayOfArraysAsListItems(key, value, writer, depth, options); return; } }
+  if (isArrayOfObjects(value)) { const header = extractTabularHeader(value); if (header) encodeArrayOfObjectsAsTabular(key, value, header, writer, depth, options); else encodeMixedArrayAsListItems(key, value, writer, depth, options); return; }
+  encodeMixedArrayAsListItems(key, value, writer, depth, options);
+}
+
+function encodeInlinePrimitiveArray(prefix, values, writer, depth, options) { const formatted = encodeInlineArrayLine(values, options.delimiter, prefix, options.lengthMarker); writer.push(depth, formatted); }
+function encodeArrayOfArraysAsListItems(prefix, values, writer, depth, options) {
+  const header = formatHeader(values.length, { key: prefix, delimiter: options.delimiter, lengthMarker: options.lengthMarker });
+  writer.push(depth, header);
+  for (const arr of values) if (isArrayOfPrimitives(arr)) { const inline = encodeInlineArrayLine(arr, options.delimiter, void 0, options.lengthMarker); writer.push(depth + 1, `${LIST_ITEM_PREFIX}${inline}`); }
+}
+
+function encodeInlineArrayLine(values, delimiter, prefix, lengthMarker) {
+  const header = formatHeader(values.length, { key: prefix, delimiter, lengthMarker });
+  const joinedValue = encodeAndJoinPrimitives(values, delimiter);
+  if (values.length === 0) return header;
+  return `${header} ${joinedValue}`;
+}
+
+function encodeArrayOfObjectsAsTabular(prefix, rows, header, writer, depth, options) {
+  const headerStr = formatHeader(rows.length, { key: prefix, fields: header, delimiter: options.delimiter, lengthMarker: options.lengthMarker });
+  writer.push(depth, `${headerStr}`);
+  writeTabularRows(rows, header, writer, depth + 1, options);
+}
+
+function extractTabularHeader(rows) { if (rows.length === 0) return; const firstRow = rows[0]; const firstKeys = Object.keys(firstRow); if (firstKeys.length === 0) return; if (isTabularArray(rows, firstKeys)) return firstKeys; }
+function isTabularArray(rows, header) { for (const row of rows) { if (Object.keys(row).length !== header.length) return false; for (const key of header) { if (!(key in row)) return false; if (!isJsonPrimitive(row[key])) return false; } } return true; }
+function writeTabularRows(rows, header, writer, depth, options) { for (const row of rows) { const joinedValue = encodeAndJoinPrimitives(header.map((key) => row[key]), options.delimiter); writer.push(depth, joinedValue); } }
+
+function encodeMixedArrayAsListItems(prefix, items, writer, depth, options) {
+  const header = formatHeader(items.length, { key: prefix, delimiter: options.delimiter, lengthMarker: options.lengthMarker });
+  writer.push(depth, header);
+  for (const item of items) if (isJsonPrimitive(item)) writer.push(depth + 1, `${LIST_ITEM_PREFIX}${encodePrimitive(item, options.delimiter)}`);
+  else if (isJsonArray(item)) { if (isArrayOfPrimitives(item)) { const inline = encodeInlineArrayLine(item, options.delimiter, void 0, options.lengthMarker); writer.push(depth + 1, `${LIST_ITEM_PREFIX}${inline}`); } }
+  else if (isJsonObject(item)) encodeObjectAsListItem(item, writer, depth + 1, options);
+}
+
+function encodeObjectAsListItem(obj, writer, depth, options) {
+  const keys = Object.keys(obj);
+  if (keys.length === 0) { writer.push(depth, LIST_ITEM_MARKER); return; }
+  const firstKey = keys[0];
+  const encodedKey = encodeKey(firstKey);
+  const firstValue = obj[firstKey];
+  if (isJsonPrimitive(firstValue)) writer.push(depth, `${LIST_ITEM_PREFIX}${encodedKey}: ${encodePrimitive(firstValue, options.delimiter)}`);
+  else if (isJsonArray(firstValue)) if (isArrayOfPrimitives(firstValue)) { const formatted = encodeInlineArrayLine(firstValue, options.delimiter, firstKey, options.lengthMarker); writer.push(depth, `${LIST_ITEM_PREFIX}${formatted}`); }
+  else if (isArrayOfObjects(firstValue)) { const header = extractTabularHeader(firstValue); if (header) { const headerStr = formatHeader(firstValue.length, { key: firstKey, fields: header, delimiter: options.delimiter, lengthMarker: options.lengthMarker }); writer.push(depth, `${LIST_ITEM_PREFIX}${headerStr}`); writeTabularRows(firstValue, header, writer, depth + 1, options); } else { writer.push(depth, `${LIST_ITEM_PREFIX}${encodedKey}[${firstValue.length}]:`); for (const item of firstValue) encodeObjectAsListItem(item, writer, depth + 1, options); } }
+  else { writer.push(depth, `${LIST_ITEM_PREFIX}${encodedKey}[${firstValue.length}]:`); for (const item of firstValue) if (isJsonPrimitive(item)) writer.push(depth + 1, `${LIST_ITEM_PREFIX}${encodePrimitive(item, options.delimiter)}`); else if (isJsonArray(item) && isArrayOfPrimitives(item)) { const inline = encodeInlineArrayLine(item, options.delimiter, void 0, options.lengthMarker); writer.push(depth + 1, `${LIST_ITEM_PREFIX}${inline}`); } else if (isJsonObject(item)) encodeObjectAsListItem(item, writer, depth + 1, options); }
+  else if (isJsonObject(firstValue)) if (Object.keys(firstValue).length === 0) writer.push(depth, `${LIST_ITEM_PREFIX}${encodedKey}:`);
+  else { writer.push(depth, `${LIST_ITEM_PREFIX}${encodedKey}:`); encodeObject(firstValue, writer, depth + 2, options); }
+  for (let i = 1; i < keys.length; i++) { const key = keys[i]; encodeKeyValuePair(key, obj[key], writer, depth + 1, options); }
+}
+
+function encode(input, options) {
+  return encodeValue(normalizeValue(input), {
+    indent: options?.indent ?? 2,
+    delimiter: options?.delimiter ?? DEFAULT_DELIMITER,
+    lengthMarker: options?.lengthMarker ?? false
+  });
+}
+
+return { encode, DELIMITERS, DEFAULT_DELIMITER };
+})();
+
+// CLI Implementation
+const fs = require('fs');
+
+const args = process.argv.slice(2);
+
+if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
+  console.log(`
+Usage: json2toon [options] <file.json>
+
+Options:
+  -d, --delimiter <char>    Delimiter to use (comma, tab, pipe) [default: comma]
+  -i, --indent <number>     Spaces per indent level [default: 2]
+  -l, --length-marker       Add # prefix to array lengths
+  -h, --help                Show this help message
+
+Examples:
+  json2toon data.json
+  json2toon --delimiter tab data.json
+  json2toon -d pipe -l data.json
+  cat data.json | json2toon
+  `);
+  process.exit(0);
+}
+
+const options = {
+  indent: 2,
+  delimiter: ',',
+  lengthMarker: false
+};
+
+let filePath = null;
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+
+  if (arg === '-d' || arg === '--delimiter') {
+    const delim = args[++i];
+    if (delim === 'comma') options.delimiter = ',';
+    else if (delim === 'tab') options.delimiter = '\t';
+    else if (delim === 'pipe') options.delimiter = '|';
+    else {
+      console.error(`Invalid delimiter: ${delim}. Use comma, tab, or pipe.`);
+      process.exit(1);
+    }
+  } else if (arg === '-i' || arg === '--indent') {
+    options.indent = parseInt(args[++i], 10);
+    if (isNaN(options.indent) || options.indent < 1) {
+      console.error('Indent must be a positive number');
+      process.exit(1);
+    }
+  } else if (arg === '-l' || arg === '--length-marker') {
+    options.lengthMarker = '#';
+  } else if (!arg.startsWith('-')) {
+    filePath = arg;
+  }
+}
+
+try {
+  let jsonData;
+
+  if (filePath) {
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    jsonData = JSON.parse(fileContent);
+  } else {
+    // Read from stdin
+    const chunks = [];
+    const stdin = process.stdin;
+    stdin.setEncoding('utf8');
+
+    if (stdin.isTTY) {
+      console.error('Error: No input file specified and stdin is empty');
+      process.exit(1);
+    }
+
+    stdin.on('data', chunk => chunks.push(chunk));
+    stdin.on('end', () => {
+      const input = chunks.join('');
+      try {
+        jsonData = JSON.parse(input);
+        const toonOutput = TOON.encode(jsonData, options);
+        console.log(toonOutput);
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          console.error(`Error: Invalid JSON: ${error.message}`);
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+    return;
+  }
+
+  const toonOutput = TOON.encode(jsonData, options);
+  console.log(toonOutput);
+
+} catch (error) {
+  if (error.code === 'ENOENT') {
+    console.error(`Error: File not found: ${filePath}`);
+  } else if (error instanceof SyntaxError) {
+    console.error(`Error: Invalid JSON: ${error.message}`);
+  } else {
+    console.error(`Error: ${error.message}`);
+  }
+  process.exit(1);
+}
