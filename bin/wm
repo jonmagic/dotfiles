@@ -268,7 +268,9 @@ module WM
 
       launch_editor(workspace_file) unless @no_open || options[:print]
 
-      log(:success, "Workspace ready: #{workspace_file}")
+      if options[:print]
+        return
+      end
     end
 
     def parse_init_options(args)
