@@ -1,0 +1,441 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'json'
+require 'optparse'
+require 'fileutils'
+require 'time'
+require 'shellwords'
+
+module WM
+  VERSION = '0.1.0'
+
+  class Error < StandardError; end
+
+  class CLI
+    SEARCH_ROOTS = [
+      File.expand_path('~/github'),
+      File.expand_path('~/code')
+    ].freeze
+
+    DEFAULT_BASE_BRANCH = 'main'
+
+    COLOR_MAP = {
+      info: 36,
+      warn: 33,
+      error: 31,
+      success: 32,
+      debug: 90
+    }.freeze
+
+    USAGE = <<~USAGE.freeze
+      Usage: wm <command> [options]
+
+      Commands:
+        init       Initialize workspace session and Git worktrees
+        help       Show this message
+        version    Print CLI version
+
+      Run 'wm <command> --help' for detailed options.
+    USAGE
+
+    def initialize(argv)
+      @argv = argv.dup
+      @worktrees_root = ENV.fetch('WM_WORKTREES_ROOT', File.expand_path('~/code/worktrees'))
+      @workspaces_root = ENV.fetch('WM_WORKSPACES_ROOT', File.expand_path('~/code/workspaces'))
+      @history_file = ENV.fetch('WM_HISTORY_FILE', File.expand_path('~/.config/wm/history.json'))
+      @repo_config = ENV.fetch('WM_REPO_CONFIG', File.expand_path('~/.config/wm/repos.toml'))
+      @dry_run = false
+      @checkout_existing = false
+      @no_open = false
+      @verbose = false
+      @notes_text = nil
+      @feature_name = nil
+      @primary_repo = nil
+      @default_base = DEFAULT_BASE_BRANCH
+      @base_overrides = {}
+    end
+
+    def run
+      command = @argv.shift
+      case command
+      when nil, 'help', '-h', '--help'
+        puts USAGE
+      when 'version', '--version'
+        puts "wm #{VERSION}"
+      when 'init'
+        handle_init(@argv)
+      else
+        raise Error, "Unknown command '#{command}'. Use 'wm help'."
+      end
+    rescue Error => e
+      log(:error, e.message)
+      exit 1
+    end
+
+    private
+
+    def handle_init(args)
+      repos = parse_init_options(args)
+      raise Error, '--feature is required' if blank?(@feature_name)
+      raise Error, 'Provide at least one repo argument' if repos.empty?
+
+      slug = slugify(@feature_name)
+      primary = @primary_repo || repos.first
+
+      ensure_directories
+      require_command('git')
+
+      resolved_pairs = resolve_repos(repos)
+      resolved_map = resolved_pairs.to_h
+
+      unless resolved_map.key?(primary)
+        raise Error, "Primary repo '#{primary}' was not among the resolved repositories"
+      end
+
+      tail_repos = resolved_map.keys.reject { |name| name == primary }
+      session_id = build_session_id(slug, primary, tail_repos)
+
+      workspace_file = File.join(@workspaces_root, "#{session_id}.code-workspace")
+      manifest_file = File.join(@workspaces_root, "#{session_id}.json")
+      session_dir = File.join(@workspaces_root, session_id)
+
+      ensure_directory(session_dir)
+
+      workspace_folders = []
+      manifest_entries = []
+
+      resolved_map.each do |repo, repo_path|
+        worktree_path = File.join(@worktrees_root, repo, slug)
+        base_branch = base_for(repo)
+        branch_name = "feature/#{slug}"
+
+        ensure_directory(File.dirname(worktree_path))
+
+        final_branch = branch_name.dup
+        if File.directory?(worktree_path) && !Dir.empty?(worktree_path)
+          log(:warn, "Worktree path already exists: #{worktree_path}")
+        else
+          final_branch = prepare_worktree(repo, repo_path, worktree_path, base_branch, branch_name)
+        end
+
+        workspace_folders << { repo: repo, path: worktree_path, name: repo }
+        manifest_entries << {
+          'repo' => repo,
+          'root' => repo_path,
+          'worktree' => worktree_path,
+          'branch' => final_branch,
+          'base' => base_branch
+        }
+      end
+
+      write_workspace_file(workspace_file, workspace_folders)
+      write_manifest_file(manifest_file, session_id, slug, manifest_entries)
+      append_history(session_id, workspace_file)
+      prefill_notes(session_dir)
+      launch_editor(workspace_file)
+
+      log(:success, "Workspace ready: #{workspace_file}")
+      log(:success, "Worktrees: #{workspace_folders.map { |f| f[:path] }.join(', ')}")
+    end
+
+    def parse_init_options(args)
+      parser = OptionParser.new do |opts|
+        opts.banner = 'Usage: wm init --feature "story" repoA [repoB ...]'
+        opts.on('--feature NAME', 'Feature or story name (required)') { |value| @feature_name = value }
+        opts.on('--primary NAME', 'Primary repo anchor (defaults to first)') { |value| @primary_repo = value }
+        opts.on('--base VALUE', 'Base branch (global or repo:branch). Repeatable.') do |value|
+          if value.include?(':')
+            repo, branch = value.split(':', 2)
+            @base_overrides[repo] = branch
+          else
+            @default_base = value
+          end
+        end
+        opts.on('--notes TEXT', 'Prefill notes.md with supplied text') { |value| @notes_text = value }
+        opts.on('--checkout-existing', 'Reuse an existing branch/worktree if found') { @checkout_existing = true }
+        opts.on('--dry-run', 'Print actions without executing them') { @dry_run = true }
+        opts.on('--no-open', 'Skip launching VS Code after setup') { @no_open = true }
+        opts.on('--verbose', '-v', 'Show verbose output') { @verbose = true }
+        opts.on('-h', '--help', 'Show this help') do
+          puts opts
+          exit
+        end
+      end
+
+      parser.parse!(args)
+      args
+    end
+
+    def resolve_repos(repos)
+      repos.map do |token|
+        path = select_repo_path(token)
+        log(:info, "Resolved #{token} -> #{path}")
+        [token, path]
+      end.uniq { |repo, _| repo }
+    end
+
+    def select_repo_path(token)
+      candidates = find_repo_candidates(token)
+      raise Error, "Unable to locate clone for '#{token}'. Place it under ~/github or ~/code." if candidates.empty?
+
+      if candidates.length == 1
+        candidates.first
+      else
+        prompt_select("Multiple matches for '#{token}':", candidates)
+      end
+    end
+
+    def prompt_select(prompt, options)
+      raise Error, 'User interaction is not possible in non-interactive mode' unless interactive?
+
+      puts prompt
+      options.each_with_index do |option, index|
+        puts "  [#{index + 1}] #{option}"
+      end
+      loop do
+        print "Select option (1-#{options.length}) [1]: "
+        input = $stdin.gets
+        raise Error, 'Selection cancelled' if input.nil?
+        input = input.strip
+        input = '1' if input.empty?
+        if input.match?(/^[0-9]+$/)
+          idx = input.to_i
+          return options[idx - 1] if idx.positive? && idx <= options.length
+        end
+        puts 'Invalid selection. Try again.'
+      end
+    end
+
+    def find_repo_candidates(token)
+      SEARCH_ROOTS.flat_map do |root|
+        next [] unless Dir.exist?(root)
+
+        direct = File.join(root, token)
+        matches = []
+        matches << direct if Dir.exist?(direct)
+        Dir.glob(File.join(root, '*', token)).each { |path| matches << path if File.directory?(path) }
+        Dir.glob(File.join(root, '*', '*', token)).each { |path| matches << path if File.directory?(path) }
+        matches
+      end.compact
+        .reject { |path| path.include?('/worktrees/') }
+        .uniq
+    end
+
+    def prepare_worktree(repo, repo_path, worktree_path, base_branch, branch_name)
+      reuse_existing = @checkout_existing
+      chosen_branch = branch_name.dup
+
+      branch_present = branch_exists?(repo_path, branch_name)
+      reuse_existing = false if reuse_existing && !branch_present
+
+      if branch_present
+        if reuse_existing
+          log(:info, "Reusing existing branch #{branch_name} for #{repo}")
+        elsif interactive?
+          reuse_existing = prompt_yes_no("Branch '#{branch_name}' already exists for #{repo}. Reuse it?", default: true)
+          unless reuse_existing
+            chosen_branch = "#{branch_name}-#{Time.now.to_i}"
+            log(:warn, "Using new branch name #{chosen_branch}")
+          end
+        else
+          log(:warn, "Branch '#{branch_name}' already exists; defaulting to reuse (--checkout-existing).")
+          reuse_existing = true
+        end
+      end
+
+      if reuse_existing
+        run_cmd('git', '-C', repo_path, 'worktree', 'add', worktree_path, chosen_branch)
+      else
+        run_cmd('git', '-C', repo_path, 'fetch', '--all', '--prune')
+        run_cmd('git', '-C', repo_path, 'worktree', 'add', '-b', chosen_branch, worktree_path, base_branch)
+      end
+
+      chosen_branch
+    end
+
+    def branch_exists?(repo_path, branch)
+      return false unless File.directory?(repo_path)
+
+      system('git', '-C', repo_path, 'rev-parse', '--verify', branch, out: File::NULL, err: File::NULL)
+    end
+
+    def build_session_id(slug, primary, tail_repos)
+      if tail_repos.empty?
+        "#{slug}--#{primary}"
+      else
+        canonical_tail = tail_repos.sort.join('+')
+        "#{slug}--#{primary}+#{canonical_tail}"
+      end
+    end
+
+    def base_for(repo)
+      @base_overrides.fetch(repo, @default_base)
+    end
+
+    def write_workspace_file(file, folders)
+      data = {
+        'folders' => folders.map do |folder|
+          entry = { 'path' => folder[:path] }
+          entry['name'] = folder[:name] if folder[:name]
+          entry
+        end,
+        'settings' => {}
+      }
+      write_json(file, data)
+    end
+
+    def write_manifest_file(file, session_id, slug, repos)
+      data = {
+        'session_id' => session_id,
+        'feature' => @feature_name,
+        'slug' => slug,
+        'created_at' => Time.now.utc.iso8601,
+        'repos' => repos
+      }
+      write_json(file, data)
+    end
+
+    def write_json(file, data)
+      if @dry_run
+        log(:info, "[dry-run] Would write #{file}")
+        return
+      end
+
+      ensure_directory(File.dirname(file))
+      File.write(file, JSON.pretty_generate(data) + "\n")
+    end
+
+    def append_history(session_id, workspace_file)
+      return if @dry_run
+
+      ensure_directory(File.dirname(@history_file))
+
+      history = if File.exist?(@history_file)
+                  JSON.parse(File.read(@history_file))
+                else
+                  { 'history' => [] }
+                end
+
+      history['history'] ||= []
+      history['history'] << {
+        'session_id' => session_id,
+        'workspace' => workspace_file,
+        'timestamp' => Time.now.utc.iso8601
+      }
+
+      File.write(@history_file, JSON.pretty_generate(history) + "\n")
+    rescue JSON::ParserError
+      log(:warn, 'History file was corrupt; recreating it.')
+      history = {
+        'history' => [{
+          'session_id' => session_id,
+          'workspace' => workspace_file,
+          'timestamp' => Time.now.utc.iso8601
+        }]
+      }
+      File.write(@history_file, JSON.pretty_generate(history) + "\n")
+    end
+
+    def prefill_notes(session_dir)
+      return if @notes_text.nil? || @notes_text.empty?
+      return if @dry_run
+
+      ensure_directory(session_dir)
+      notes_file = File.join(session_dir, 'notes.md')
+      return if File.exist?(notes_file)
+
+      content = "# Notes\n\n#{@notes_text}\n"
+      File.write(notes_file, content)
+    end
+
+    def launch_editor(workspace_file)
+      return if @dry_run || @no_open
+
+      editor = which('code-insiders') || which('code')
+      unless editor
+        log(:warn, 'VS Code CLI (code/code-insiders) not found; skipping launch.')
+        return
+      end
+
+      run_cmd(editor, workspace_file)
+    end
+
+    def ensure_directories
+      ensure_directory(@worktrees_root)
+      ensure_directory(@workspaces_root)
+      ensure_directory(File.dirname(@history_file))
+    end
+
+    def ensure_directory(path)
+      return if @dry_run
+      FileUtils.mkdir_p(path)
+    end
+
+    def run_cmd(*args)
+      log(:debug, "+ #{Shellwords.shelljoin(args)}")
+      return true if @dry_run
+
+      system(*args) || raise(Error, "Command failed: #{Shellwords.shelljoin(args)}")
+    end
+
+    def which(cmd)
+      ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).each do |dir|
+        path = File.join(dir, cmd)
+        return path if File.executable?(path)
+      end
+      nil
+    end
+
+    def require_command(cmd)
+      return if which(cmd)
+
+      raise Error, "Missing required command '#{cmd}'. Please install it first."
+    end
+
+    def slugify(text)
+      slug = text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')
+      raise Error, "Unable to derive slug from '#{text}'" if slug.empty?
+
+      slug
+    end
+
+    def prompt_yes_no(message, default: true)
+      raise Error, 'User interaction is not possible in non-interactive mode' unless interactive?
+
+      suffix = default ? 'Y/n' : 'y/N'
+      loop do
+        print "#{message} [#{suffix}]: "
+        input = $stdin.gets
+        raise Error, 'Selection cancelled' if input.nil?
+        input = input.strip.downcase
+        return default if input.empty?
+        return true if %w[y yes].include?(input)
+        return false if %w[n no].include?(input)
+        puts 'Please enter y or n.'
+      end
+    end
+
+    def interactive?
+      $stdin.tty?
+    end
+
+    def blank?(value)
+      value.nil? || (value.respond_to?(:empty?) && value.empty?)
+    end
+
+    def log(level, message)
+      return if level == :debug && !@verbose
+
+      color_code = COLOR_MAP[level]
+      color = color_code ? "\e[#{color_code}m" : ''
+      reset = color_code ? '\e[0m' : ''
+      stream = level == :error ? $stderr : $stdout
+      stream.puts("#{color}[#{level.to_s.upcase}]#{reset} #{message}")
+    end
+  end
+end
+
+if __FILE__ == $PROGRAM_NAME
+  WM::CLI.new(ARGV).run
+end
