@@ -34,6 +34,7 @@ module WM
       Commands:
         init       Initialize workspace session and Git worktrees
         list       Display recent workspace sessions
+        open       Launch an existing workspace session
         help       Show this message
         version    Print CLI version
 
@@ -68,6 +69,8 @@ module WM
         handle_init(@argv)
       when 'list'
         handle_list(@argv)
+      when 'open'
+        handle_open(@argv)
       else
         raise Error, "Unknown command '#{command}'. Use 'wm help'."
       end
@@ -194,6 +197,78 @@ module WM
       end
 
       render_sessions_table(sessions)
+    end
+
+    def handle_open(args)
+      options = {
+        session: nil,
+        recent: nil,
+        print: false
+      }
+
+      parser = OptionParser.new do |opts|
+        opts.banner = 'Usage: wm open [options] <session-id>'
+        opts.on('--session ID', 'Session identifier to open') { |value| options[:session] = value }
+        opts.on('--recent N', Integer, 'Open the Nth most recent session (1 = latest)') { |value| options[:recent] = value }
+        opts.on('--print', 'Print workspace path without launching editor') { options[:print] = true }
+        opts.on('--no-open', 'Skip launching VS Code after resolving workspace') { @no_open = true }
+        opts.on('-h', '--help', 'Show this help') do
+          puts opts
+          exit
+        end
+      end
+
+      parser.parse!(args)
+
+      history_entries = read_history
+
+      workspace_file = nil
+      entry = nil
+      session_id = nil
+
+      if options[:recent]
+        raise Error, 'Do not provide a session argument when using --recent' unless args.empty? && options[:session].nil?
+
+        index = options[:recent].to_i
+        raise Error, '--recent expects a positive integer' unless index.positive?
+
+        if history_entries.empty?
+          raise Error, 'No sessions available in history.'
+        end
+
+        sorted = history_entries.sort_by { |record| record['timestamp'].to_s }.reverse
+        entry = sorted[index - 1]
+        raise Error, "History entry ##{index} was not found." unless entry
+
+        workspace_file = entry['workspace']
+        session_id = entry['session_id']
+      else
+        token = options[:session] || args.shift
+        raise Error, 'Provide a session identifier or use --recent.' if blank?(token)
+
+        workspace_file, entry, session_id = resolve_workspace_from_token(token, history_entries)
+      end
+
+      workspace_file = File.expand_path(workspace_file) if workspace_file
+      raise Error, 'Workspace path was not recorded for this session.' if workspace_file.nil?
+      raise Error, "Workspace file not found: #{workspace_file}" unless File.exist?(workspace_file)
+
+      manifest = manifest_for(session_id)
+      base_entry = entry || {
+        'session_id' => session_id,
+        'workspace' => workspace_file,
+        'timestamp' => manifest&.fetch('created_at', nil)
+      }
+
+      snapshot = session_snapshot(base_entry, manifest)
+      block = session_block_lines(snapshot, 9)
+      print_info_block(block)
+
+      puts workspace_file if options[:print]
+
+      launch_editor(workspace_file) unless @no_open || options[:print]
+
+      log(:success, "Workspace ready: #{workspace_file}")
     end
 
     def parse_init_options(args)
@@ -465,15 +540,20 @@ module WM
       divider = '─' * 64
 
       sessions.each_with_index do |session, index|
-        block = []
-        block << divider
-        block << format_row('Session', session['session_id'], label_width)
-        block << format_row('Status', session_status_label(session), label_width)
-        block << format_row('Created', session['timestamp'] || '—', label_width)
-        block << format_row('Workspace', session['workspace'] || '—', label_width)
-        block.concat(repo_rows(session['repos'], label_width))
+        block = session_block_lines(session, label_width)
+        block.unshift(divider) if index.positive?
         print_info_block(block)
       end
+    end
+
+    def session_block_lines(session, width)
+      lines = []
+      lines << format_row('Session', session['session_id'], width)
+      lines << format_row('Status', session_status_label(session), width)
+      lines << format_row('Created', session['timestamp'] || '—', width)
+      lines << format_row('Workspace', session['workspace'] || '—', width)
+      lines.concat(repo_rows(session['repos'], width))
+      lines
     end
 
     def format_row(label, value, width)
@@ -511,6 +591,52 @@ module WM
 
       # stream.puts(prefix)
       lines.each { |line| stream.puts(line) }
+    end
+
+    def resolve_workspace_from_token(token, history_entries)
+      identifier = token.to_s.strip
+      raise Error, 'Provide a session identifier.' if identifier.empty?
+
+      entries = history_entries || []
+
+      expanded = File.expand_path(identifier)
+      if File.file?(expanded)
+        entry = find_history_entry_by_workspace(entries, expanded)
+        session_id = entry ? entry['session_id'] : File.basename(expanded, '.code-workspace')
+        return [expanded, entry, session_id]
+      end
+
+      entry = find_history_entry_by_session(entries, identifier)
+      if entry && entry['workspace'] && File.exist?(entry['workspace'])
+        return [entry['workspace'], entry, entry['session_id']]
+      end
+
+      candidate = File.join(@workspaces_root, identifier)
+      candidate += '.code-workspace' unless candidate.end_with?('.code-workspace')
+      candidate = File.expand_path(candidate)
+      if File.exist?(candidate)
+        entry = find_history_entry_by_workspace(entries, candidate)
+        session_id = entry ? entry['session_id'] : File.basename(candidate, '.code-workspace')
+        return [candidate, entry, session_id]
+      end
+
+      raise Error, "Unable to locate workspace for '#{identifier}'."
+    end
+
+    def find_history_entry_by_session(history_entries, session_id)
+      (history_entries || []).reverse_each do |item|
+        return item if item['session_id'] == session_id
+      end
+      nil
+    end
+
+    def find_history_entry_by_workspace(history_entries, workspace_path)
+      normalized = File.expand_path(workspace_path)
+      (history_entries || []).reverse_each do |item|
+        next unless item['workspace']
+        return item if File.expand_path(item['workspace']) == normalized
+      end
+      nil
     end
 
     def session_status_label(session)
