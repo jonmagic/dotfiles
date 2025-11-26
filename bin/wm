@@ -33,6 +33,7 @@ module WM
 
       Commands:
         init       Initialize workspace session and Git worktrees
+        list       Display recent workspace sessions
         help       Show this message
         version    Print CLI version
 
@@ -65,6 +66,8 @@ module WM
         puts "wm #{VERSION}"
       when 'init'
         handle_init(@argv)
+      when 'list'
+        handle_list(@argv)
       else
         raise Error, "Unknown command '#{command}'. Use 'wm help'."
       end
@@ -137,6 +140,60 @@ module WM
 
       log(:success, "Workspace ready: #{workspace_file}")
       log(:success, "Worktrees: #{workspace_folders.map { |f| f[:path] }.join(', ')}")
+    end
+
+    def handle_list(args)
+      options = {
+        limit: nil,
+        active_only: false,
+        json: false,
+        reverse: false
+      }
+
+      parser = OptionParser.new do |opts|
+        opts.banner = 'Usage: wm list [options]'
+        opts.on('--limit N', Integer, 'Limit the number of sessions displayed') { |value| options[:limit] = value }
+        opts.on('--active', 'Show only sessions with existing worktrees') { options[:active_only] = true }
+        opts.on('--json', 'Output JSON instead of text') { options[:json] = true }
+        opts.on('--reverse', 'Show oldest sessions first') { options[:reverse] = true }
+        opts.on('-h', '--help', 'Show this help') do
+          puts opts
+          exit
+        end
+      end
+
+      parser.parse!(args)
+
+      history_entries = read_history
+
+      if history_entries.empty?
+        log(:info, 'No workspace sessions found.')
+        return
+      end
+
+      sorted = history_entries.sort_by { |entry| entry['timestamp'].to_s }
+      sorted.reverse! unless options[:reverse]
+
+      sessions = sorted.map do |entry|
+        manifest = manifest_for(entry['session_id'])
+        session_snapshot(entry, manifest)
+      end
+
+      sessions.select! { |session| session['status'] == 'active' } if options[:active_only]
+
+      sessions = sessions.first(options[:limit]) if options[:limit]
+
+      if sessions.empty?
+        log(:info, 'No workspace sessions matched the filters.')
+        return
+      end
+
+      if options[:json]
+        puts JSON.pretty_generate(sessions)
+        return
+      end
+
+      render_sessions_table(sessions)
     end
 
     def parse_init_options(args)
@@ -337,6 +394,133 @@ module WM
       File.write(@history_file, JSON.pretty_generate(history) + "\n")
     end
 
+    def read_history
+      return [] unless File.exist?(@history_file)
+
+      data = JSON.parse(File.read(@history_file))
+      entries = data['history']
+      return [] unless entries.is_a?(Array)
+
+      entries
+    rescue JSON::ParserError => e
+      log(:warn, "History file was corrupt (#{e.message}); ignoring it.")
+      []
+    end
+
+    def manifest_for(session_id)
+      file = File.join(@workspaces_root, "#{session_id}.json")
+      return nil unless File.exist?(file)
+
+      JSON.parse(File.read(file))
+    rescue JSON::ParserError => e
+      log(:warn, "Manifest for #{session_id} could not be parsed: #{e.message}")
+      nil
+    end
+
+    def session_active?(manifest, entry)
+      if manifest.is_a?(Hash)
+        repos = manifest['repos']
+        if repos.is_a?(Array)
+          repos.each do |repo|
+            worktree = repo['worktree']
+            return true if worktree && Dir.exist?(worktree)
+          end
+        end
+      end
+
+      workspace = entry['workspace']
+      return true if workspace && File.exist?(workspace)
+
+      false
+    end
+
+    def session_snapshot(entry, manifest)
+      repos = []
+
+      if manifest.is_a?(Hash)
+        repo_entries = manifest['repos']
+        if repo_entries.is_a?(Array)
+          repos = repo_entries.map do |repo|
+            {
+              'repo' => repo['repo'],
+              'branch' => repo['branch'],
+              'base' => repo['base'],
+              'worktree' => repo['worktree']
+            }
+          end
+        end
+      end
+
+      {
+        'session_id' => entry['session_id'],
+        'timestamp' => entry['timestamp'],
+        'workspace' => entry['workspace'],
+        'status' => session_active?(manifest, entry) ? 'active' : 'stale',
+        'repos' => repos
+      }
+    end
+
+    def render_sessions_table(sessions)
+      label_width = 9
+      divider = '─' * 64
+
+      sessions.each_with_index do |session, index|
+        block = []
+        block << divider
+        block << format_row('Session', session['session_id'], label_width)
+        block << format_row('Status', session_status_label(session), label_width)
+        block << format_row('Created', session['timestamp'] || '—', label_width)
+        block << format_row('Workspace', session['workspace'] || '—', label_width)
+        block.concat(repo_rows(session['repos'], label_width))
+        print_info_block(block)
+      end
+    end
+
+    def format_row(label, value, width)
+      val = value
+      val = '—' if val.nil? || (val.respond_to?(:empty?) && val.empty?)
+      "#{label.ljust(width)} : #{val}"
+    end
+
+    def repo_rows(repos, width)
+      return [format_row('Repos', '—', width)] if repos.empty?
+
+      rows = []
+      rows << "#{'Repos'.ljust(width)} :"
+      repos.each do |repo|
+        rows << indent_line("- #{repo['repo'] || 'unknown'}", 0)
+        rows << indent_line("branch  : #{repo['branch'] || '—'}", 1)
+        rows << indent_line("base    : #{repo['base'] || '—'}", 1)
+        rows << indent_line("worktree: #{repo['worktree'] || '—'}", 1)
+      end
+      rows
+    end
+
+    def indent_line(text, level = 1)
+      ('  ' * level) + text
+    end
+
+    def print_info_block(lines)
+      stream = $stdout
+      color_code = COLOR_MAP[:info]
+      prefix = if color_code && stream.tty?
+                 "\e[#{color_code}m[INFO]\e[0m"
+               else
+                 '[INFO]'
+               end
+
+      # stream.puts(prefix)
+      lines.each { |line| stream.puts(line) }
+    end
+
+    def session_status_label(session)
+      if session['status'] == 'active'
+        colorize('🟢 active', :success)
+      else
+        colorize('⚪ stale', :warn)
+      end
+    end
+
     def prefill_notes(session_dir)
       return if @notes_text.nil? || @notes_text.empty?
       return if @dry_run
@@ -393,6 +577,16 @@ module WM
       raise Error, "Missing required command '#{cmd}'. Please install it first."
     end
 
+    def colorize(text, level_key)
+      code = COLOR_MAP[level_key]
+      return text unless code
+
+      stream = $stdout
+      return text unless stream.tty?
+
+      "\e[#{code}m#{text}\e[0m"
+    end
+
     def slugify(text)
       slug = text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')
       raise Error, "Unable to derive slug from '#{text}'" if slug.empty?
@@ -428,9 +622,10 @@ module WM
       return if level == :debug && !@verbose
 
       color_code = COLOR_MAP[level]
-      color = color_code ? "\e[#{color_code}m" : ''
-      reset = color_code ? '\e[0m' : ''
       stream = level == :error ? $stderr : $stdout
+      use_color = color_code && stream.tty?
+      color = use_color ? "\e[#{color_code}m" : ''
+      reset = use_color ? "\e[0m" : ''
       stream.puts("#{color}[#{level.to_s.upcase}]#{reset} #{message}")
     end
   end
