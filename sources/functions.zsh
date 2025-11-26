@@ -4,7 +4,7 @@ function homebrew() {
     return 0
   fi
 
-  brew update && brew outdated && brew upgrade
+  brew update && brew outdated && brew upgrade && brew bundle cleanup --force --file="$HOME/.dotfiles/brew/Brewfile"
 }
 
 function update_software() {

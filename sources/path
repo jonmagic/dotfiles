@@ -15,6 +15,7 @@ if [[ $OSTYPE == darwin* ]]; then
   add_to_path_if_exists "$HOME/.bun/bin"
   add_to_path_if_exists "$HOME/.cache/lm-studio/bin"
   add_to_path_if_exists "$HOME/code/chromium/depot_tools"
+  add_to_path_if_exists "$HOME/code/go/bin"
 fi
 
 PATH="$HOME/.dotfiles/bin:$PATH"

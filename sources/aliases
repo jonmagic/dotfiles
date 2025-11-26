@@ -59,3 +59,8 @@ fi
 if command_exists gh; then
   alias fixcs='gh codespace ports visibility 3000:public -c $(gh codespace list --limit 1 --json name -q ".[0].name")'
 fi
+
+# lazygit
+if command_exists lazygit; then
+  alias lg='lazygit'
+fi

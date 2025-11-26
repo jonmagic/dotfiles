@@ -1,2 +1,9 @@
-export RUBY_CFLAGS="-Wno-error=implicit-function-declaration"
-export GPG_TTY=$(tty)
+if [[ $OSTYPE == darwin* ]]; then
+  export RUBY_CFLAGS="-Wno-error=implicit-function-declaration"
+
+  # All Go files and caches live in ~/code/*
+  export GOPATH="$HOME/code/go/go"                 # workspace (rarely needed with modules, still useful)
+  export GOMODCACHE="$HOME/code/go/pkg/mod"        # module cache
+  export GOCACHE="$HOME/code/.cache/go/go-build"   # build cache
+  export GOBIN="$HOME/code/go/bin"                 # where `go install` puts binaries
+fi
