@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"name": ".dotfiles",
+			"path": "/Users/jonmagic/.dotfiles"
+		},
+		{
+			"name": ".claude",
+			"path": "/Users/jonmagic/.claude"
+		},
+		{
+			"name": ".copilot",
+			"path": "/Users/jonmagic/.copilot"
+		},
+		{
+			"name": "litellm-copilot",
+			"path": "/Users/jonmagic/code/jonmagic/litellm-copilot"
+		}
+	],
+	"settings": {}
+}
