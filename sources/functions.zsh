@@ -32,6 +32,14 @@ function update_software() {
   fi
   echo ""
 
+  echo "==> Upgrading global npm packages"
+  if command -v npm >/dev/null 2>&1; then
+    npm update -g
+  else
+    echo "npm not installed; skipping."
+  fi
+  echo ""
+
   echo "==> Upgrading homebrew"
   homebrew
   echo ""

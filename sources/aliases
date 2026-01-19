@@ -20,6 +20,11 @@ if command_exists code-insiders; then
   alias ee=code-insiders
 fi
 
+# LLM visual mode
+if command_exists llm; then
+  alias llm-vision=llm -m s52
+fi
+
 # Tailscale
 if [[ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]]; then
   alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
@@ -27,7 +32,7 @@ fi
 
 # Archive Zoom meeting
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
-  alias am='~/code/jonmagic/scripts/bin/archive-meeting --transcripts-dir ~/Documents/Zoom/ --target-dir ~/Dropbox/brain --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md'
+  alias am='~/code/jonmagic/scripts/bin/archive-meeting --transcripts-dir ~/Documents/Zoom/ --target-dir ~/Brain --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md'
 fi
 
 # Create semantic commit
@@ -63,4 +68,29 @@ fi
 # lazygit
 if command_exists lazygit; then
   alias lg='lazygit'
+fi
+
+# Start litellm proxy to copilot models
+if executable_exists "$HOME/code/jonmagic/litellm-copilot/litellm-copilot"; then
+  alias proxy='~/code/jonmagic/litellm-copilot/litellm-copilot --nightly --port 4000'
+fi
+
+# happy claude code client
+if executable_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/happy"; then
+  alias happy='~/.asdf/installs/nodejs/25.2.1/bin/happy'
+fi
+
+# copilot cli
+if executable_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"; then
+  alias copilot='~/.asdf/installs/nodejs/25.2.1/bin/copilot'
+fi
+
+# ruby
+if command_exists "$HOME/.asdf/shims/ruby"; then
+  alias ruby='~/.asdf/shims/ruby'
+fi
+
+# llm
+if command_exists "/opt/homebrew/bin/llm"; then
+  alias llm='/opt/homebrew/bin/llm'
 fi
