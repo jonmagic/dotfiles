@@ -1,0 +1,8 @@
+dist/
+out/
+node_modules/
+.vscode-test/
+
+# Raycast dev tooling can generate JS/DTS artifacts alongside TSX
+raycast/src/**/*.js
+raycast/src/**/*.d.ts
