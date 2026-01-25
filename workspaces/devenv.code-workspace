@@ -16,6 +16,9 @@
 		},
 		{
 			"path": "../../code/jonmagic/prompts"
+		},
+		{
+			"path": "../../code/jonmagic/skills"
 		}
 	],
 	"settings": {}
