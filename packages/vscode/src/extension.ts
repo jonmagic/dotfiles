@@ -1,9 +1,15 @@
 import * as vscode from "vscode"
 
 import { createDailyProjectNote } from "@jonmagic/brain-core"
+import { getWorkspaceCache, disposeWorkspaceCache } from "./cache/workspaceCache"
 
-export function activate(context: vscode.ExtensionContext): void {
-  const disposable = vscode.commands.registerCommand(
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  // Initialize workspace cache
+  const cache = getWorkspaceCache()
+  await cache.initialize()
+
+  // Register daily project note command
+  const createNoteDisposable = vscode.commands.registerCommand(
     "jonmagic.brain.createDailyProjectNote",
     async () => {
       const title = await vscode.window.showInputBox({
@@ -29,9 +35,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   )
 
-  context.subscriptions.push(disposable)
+  context.subscriptions.push(createNoteDisposable)
 }
 
 export function deactivate(): void {
-  // no-op
+  disposeWorkspaceCache()
 }
