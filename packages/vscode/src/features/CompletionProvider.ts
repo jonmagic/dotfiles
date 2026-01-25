@@ -75,18 +75,30 @@ export class WikilinkCompletionProvider implements vscode.CompletionItemProvider
         vscode.CompletionItemKind.File
       )
 
-      // The text to insert: [[uid:xxx|path]] or [[path]]
-      const insertText = formatWikilink(file.uid, displayPath)
+      // The text to insert - just the inner content, not the brackets
+      // Because we'll replace from [[ and include any trailing ]]
+      const innerText = file.uid
+        ? `uid:${file.uid}|${displayPath}`
+        : displayPath
 
-      // We need to replace from [[ to cursor position
-      // Calculate the range to replace
+      // Calculate the range to replace - from [[ to cursor, plus any trailing ]]
+      const lineText = document.lineAt(position.line).text
       const replaceStart = new vscode.Position(
         position.line,
         linePrefix.lastIndexOf("[[")
       )
-      const replaceRange = new vscode.Range(replaceStart, position)
 
-      item.insertText = insertText
+      // Check if there's ]] after the cursor
+      const afterCursor = lineText.substring(position.character)
+      const hasClosingBrackets = afterCursor.startsWith("]]")
+      const replaceEnd = hasClosingBrackets
+        ? new vscode.Position(position.line, position.character + 2)
+        : position
+
+      const replaceRange = new vscode.Range(replaceStart, replaceEnd)
+
+      // Insert full wikilink including brackets
+      item.insertText = `[[${innerText}]]`
       item.range = replaceRange
 
       // Sort text: pad with zeros to maintain order
