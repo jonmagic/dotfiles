@@ -36,8 +36,13 @@ if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
 fi
 
 # Create semantic commit
-if executable_exists "$HOME/code/jonmagic/scripts/bin/prepare-commit"; then
-  alias commit='~/code/jonmagic/scripts/bin/prepare-commit --commit-message-prompt-path ~/code/jonmagic/prompts/generate/commit-message.md'
+if command_exists copilot; then
+  commit() {
+    local msg=$(copilot -p "$(cat ~/code/jonmagic/prompts/generate/commit-message.md)
+
+$(git diff --cached)" | sed '/^```/d')
+    git commit -m "$msg"
+  }
 fi
 
 # Fetch GitHub conversation
