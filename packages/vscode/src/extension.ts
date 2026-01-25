@@ -3,6 +3,7 @@ import * as vscode from "vscode"
 import { createDailyProjectNote } from "@jonmagic/brain-core"
 import { getWorkspaceCache, disposeWorkspaceCache } from "./cache/workspaceCache"
 import { WikilinkDocumentLinkProvider } from "./features/DocumentLinkProvider"
+import { WikilinkCompletionProvider } from "./features/CompletionProvider"
 import { registerOpenDocumentCommand } from "./commands/openDocumentByReference"
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -16,6 +17,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.languages.registerDocumentLinkProvider(
       { language: "markdown" },
       linkProvider
+    )
+  )
+
+  // Register completion provider for wikilinks (triggers on [)
+  const completionProvider = new WikilinkCompletionProvider()
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider(
+      { language: "markdown" },
+      completionProvider,
+      "[" // Trigger on [
     )
   )
 
