@@ -5,20 +5,8 @@
 			"path": ".."
 		},
 		{
-			"name": ".claude",
-			"path": "../../.claude"
-		},
-		{
 			"name": ".copilot",
 			"path": "../../.copilot"
-		},
-		{
-			"name": ".mcp",
-			"path": "../../.mcp"
-		},
-		{
-			"name": "litellm-copilot",
-			"path": "../../code/jonmagic/litellm-copilot"
 		},
 		{
 			"path": "../../Brain"
