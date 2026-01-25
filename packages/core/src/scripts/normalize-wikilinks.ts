@@ -2,7 +2,7 @@
 // Normalize all wikilinks in a Brain repository to use full paths.
 //
 // Transforms:
-// 1. [[uid:xxx|Some/Path]] → [[Some/Path]]
+// 1. [[uid:xxx|Some/Path]] → [[Full/Path/To/File]] (resolves UID to actual path)
 // 2. [[just-filename]] → [[Full/Path/To/just-filename]] (if unambiguous)
 // 3. [[Full/Path]] → unchanged
 //
@@ -12,7 +12,7 @@
 
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { extractWikilinks, pathToDisplayPath, UID_PREFIX } from "../wikilinks/index.js"
+import { extractWikilinks, pathToDisplayPath, UID_PREFIX, buildUidIndex, type UidIndex, type FileInfo } from "../wikilinks/index.js"
 import { extractUid } from "../frontmatter/index.js"
 
 interface LinkChange {
@@ -91,12 +91,28 @@ function buildFilenameIndex(
 }
 
 /**
+ * Build a UID index from all files to resolve uid:xxx references.
+ */
+function buildUidIndexFromFiles(brainRoot: string, files: string[]): UidIndex {
+  const fileInfos: FileInfo[] = []
+  
+  for (const file of files) {
+    const relativePath = path.relative(brainRoot, file)
+    const content = fs.readFileSync(file, "utf-8")
+    fileInfos.push({ relativePath, content })
+  }
+  
+  return buildUidIndex(fileInfos)
+}
+
+/**
  * Normalize wikilinks in a single file.
  */
 function normalizeFileLinks(
   brainRoot: string,
   filePath: string,
   filenameIndex: Map<string, string[]>,
+  uidIndex: UidIndex,
   dryRun: boolean
 ): LinkChange[] {
   const changes: LinkChange[] = []
@@ -108,10 +124,25 @@ function normalizeFileLinks(
   for (const link of links) {
     let newTarget: string | null = null
 
-    // Case 1: uid:xxx|path format → extract path (the label)
+    // Case 1: uid:xxx|label format → resolve UID to actual path
     if (link.target.startsWith(UID_PREFIX)) {
-      if (link.label) {
-        newTarget = link.label
+      const uid = link.target.slice(UID_PREFIX.length)
+      const resolvedPath = uidIndex.byUid.get(uid)
+      
+      if (resolvedPath) {
+        // Convert to display path (without .md)
+        newTarget = pathToDisplayPath(resolvedPath)
+      } else if (link.label) {
+        // UID not found, try to resolve the label as a short ref
+        const labelLower = link.label.toLowerCase()
+        const matches = filenameIndex.get(labelLower)
+        if (matches && matches.length === 1) {
+          newTarget = matches[0]
+        } else {
+          console.warn(
+            `  Warning: UID "${uid}" not found and label "${link.label}" is ambiguous in ${relativePath}`
+          )
+        }
       }
     }
     // Case 2: Short ref (just filename, no /) → resolve to full path
@@ -176,13 +207,16 @@ export function normalizeWikilinks(
 
   const filenameIndex = buildFilenameIndex(brainRoot, files)
   console.log(`Built filename index with ${filenameIndex.size} unique filenames`)
+  
+  const uidIndex = buildUidIndexFromFiles(brainRoot, files)
+  console.log(`Built UID index with ${uidIndex.byUid.size} UIDs`)
   console.log()
 
   const allChanges: LinkChange[] = []
   const modifiedFiles = new Set<string>()
 
   for (const file of files) {
-    const changes = normalizeFileLinks(brainRoot, file, filenameIndex, dryRun)
+    const changes = normalizeFileLinks(brainRoot, file, filenameIndex, uidIndex, dryRun)
     if (changes.length > 0) {
       allChanges.push(...changes)
       modifiedFiles.add(file)
