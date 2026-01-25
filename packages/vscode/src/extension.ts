@@ -2,11 +2,25 @@ import * as vscode from "vscode"
 
 import { createDailyProjectNote } from "@jonmagic/brain-core"
 import { getWorkspaceCache, disposeWorkspaceCache } from "./cache/workspaceCache"
+import { WikilinkDocumentLinkProvider } from "./features/DocumentLinkProvider"
+import { registerOpenDocumentCommand } from "./commands/openDocumentByReference"
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   // Initialize workspace cache
   const cache = getWorkspaceCache()
   await cache.initialize()
+
+  // Register document link provider for wikilinks
+  const linkProvider = new WikilinkDocumentLinkProvider()
+  context.subscriptions.push(
+    vscode.languages.registerDocumentLinkProvider(
+      { language: "markdown" },
+      linkProvider
+    )
+  )
+
+  // Register open document by reference command
+  registerOpenDocumentCommand(context)
 
   // Register daily project note command
   const createNoteDisposable = vscode.commands.registerCommand(
