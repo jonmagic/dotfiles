@@ -50,18 +50,26 @@ export function parseWikilink(match: string): ParsedWikilink {
     label = inner.slice(pipeIndex + 1)
   } else {
     target = inner
+    label = undefined
   }
 
   const isUid = target.startsWith(UID_PREFIX)
   const uid = isUid ? target.slice(UID_PREFIX.length) : undefined
 
-  return {
+  const result: ParsedWikilink = {
     full: match.startsWith("[[") ? match : `[[${match}]]`,
     target,
-    label,
     isUid,
-    uid,
   }
+
+  if (label !== undefined) {
+    result.label = label
+  }
+  if (uid !== undefined) {
+    result.uid = uid
+  }
+
+  return result
 }
 
 /**

@@ -40,7 +40,8 @@ export function parseFrontmatter(content: string): ParseResult {
 
   // Find closing delimiter (skip first line which is opening ---)
   for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim() === "---") {
+    const line = lines[i]
+    if (line !== undefined && line.trim() === "---") {
       endIndex = i
       break
     }

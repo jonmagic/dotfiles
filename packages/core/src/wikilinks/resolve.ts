@@ -78,7 +78,8 @@ function resolvePath(target: string, allPaths: string[]): string | null {
 
   // If exactly one match, return it
   if (matches.length === 1) {
-    return matches[0]
+    const match = matches[0]
+    return match !== undefined ? match : null
   }
 
   // Multiple matches - can't resolve unambiguously
