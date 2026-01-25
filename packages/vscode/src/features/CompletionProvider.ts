@@ -103,8 +103,7 @@ export class WikilinkCompletionProvider implements vscode.CompletionItemProvider
         item.detail = `uid: ${file.uid}`
       }
 
-      // Documentation will be filled in by resolveCompletionItem
-      item.documentation = undefined
+      // Documentation will be filled in by resolveCompletionItem (leave unset)
 
       // Store file info for resolution
       ;(item as CompletionItemWithFile).cachedFile = file
