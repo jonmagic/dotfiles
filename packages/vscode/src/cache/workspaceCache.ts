@@ -1,6 +1,7 @@
 // Workspace cache for markdown files and UID index.
 // Maintains an in-memory index of all markdown files and their UIDs
 // for fast wikilink resolution and completion.
+// Also tracks backlinks (which files link to which) for rename support.
 
 import * as vscode from "vscode"
 import * as fs from "node:fs"
@@ -10,6 +11,8 @@ import {
   type UidIndex,
   type FileInfo,
   extractUid,
+  extractWikilinks,
+  pathToDisplayPath,
 } from "@jonmagic/brain-core"
 
 export interface CachedFile {
@@ -21,11 +24,15 @@ export interface CachedFile {
   mtime: number
   /** UID from frontmatter (if present) */
   uid: string | null
+  /** Wikilink targets this file contains (relative paths without .md) */
+  outgoingLinks: string[]
 }
 
 export class WorkspaceCache {
   private files: Map<string, CachedFile> = new Map()
   private uidIndex: UidIndex = { byUid: new Map(), byPath: new Map() }
+  /** Backlinks index: target path → Set of files that link to it */
+  private backlinks: Map<string, Set<string>> = new Map()
   private workspaceRoot: string | null = null
   private fileWatcher: vscode.FileSystemWatcher | null = null
   private isInitialized = false
@@ -49,8 +56,9 @@ export class WorkspaceCache {
       await this.addFile(uri.fsPath)
     }
 
-    // Rebuild UID index
+    // Rebuild indices
     this.rebuildUidIndex()
+    this.rebuildBacklinks()
 
     // Set up file watcher
     this.fileWatcher = vscode.workspace.createFileSystemWatcher("**/*.md")
@@ -100,11 +108,23 @@ export class WorkspaceCache {
   }
 
   /**
+   * Get files that link to a given path.
+   * @param targetPath Relative path without .md extension
+   * @returns Array of relative paths of files that contain links to targetPath
+   */
+  getBacklinks(targetPath: string): string[] {
+    const normalized = targetPath.replace(/\.md$/, "")
+    const linkers = this.backlinks.get(normalized)
+    return linkers ? Array.from(linkers) : []
+  }
+
+  /**
    * Force a full refresh of the cache.
    */
   async refresh(): Promise<void> {
     this.files.clear()
     this.uidIndex = { byUid: new Map(), byPath: new Map() }
+    this.backlinks.clear()
     this.isInitialized = false
     await this.initialize()
   }
@@ -134,11 +154,22 @@ export class WorkspaceCache {
       const relativePath = path.relative(this.workspaceRoot, absolutePath)
       const uid = extractUid(content)
 
+      // Extract outgoing links
+      const links = extractWikilinks(content)
+      const outgoingLinks = links.map((link) => {
+        // Handle uid: prefix links by extracting the path from label
+        if (link.isUid && link.label) {
+          return link.label.replace(/\.md$/, "")
+        }
+        return link.target.replace(/\.md$/, "")
+      })
+
       this.files.set(absolutePath, {
         absolutePath,
         relativePath,
         mtime: stat.mtimeMs,
         uid,
+        outgoingLinks,
       })
     } catch {
       // File might have been deleted or is unreadable
@@ -160,19 +191,40 @@ export class WorkspaceCache {
     this.uidIndex = buildUidIndex(fileInfos)
   }
 
+  private rebuildBacklinks(): void {
+    this.backlinks.clear()
+
+    for (const cached of this.files.values()) {
+      const sourcePathNoExt = pathToDisplayPath(cached.relativePath)
+
+      for (const targetPath of cached.outgoingLinks) {
+        // Normalize target path
+        const normalizedTarget = targetPath.replace(/\.md$/, "")
+
+        if (!this.backlinks.has(normalizedTarget)) {
+          this.backlinks.set(normalizedTarget, new Set())
+        }
+        this.backlinks.get(normalizedTarget)!.add(sourcePathNoExt)
+      }
+    }
+  }
+
   private async onFileCreated(uri: vscode.Uri): Promise<void> {
     await this.addFile(uri.fsPath)
     this.rebuildUidIndex()
+    this.rebuildBacklinks()
   }
 
   private async onFileChanged(uri: vscode.Uri): Promise<void> {
     await this.addFile(uri.fsPath)
     this.rebuildUidIndex()
+    this.rebuildBacklinks()
   }
 
   private onFileDeleted(uri: vscode.Uri): void {
     this.files.delete(uri.fsPath)
     this.rebuildUidIndex()
+    this.rebuildBacklinks()
   }
 }
 
