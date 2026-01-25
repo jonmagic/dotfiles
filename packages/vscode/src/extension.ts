@@ -4,6 +4,7 @@ import { createDailyProjectNote } from "@jonmagic/brain-core"
 import { getWorkspaceCache, disposeWorkspaceCache } from "./cache/workspaceCache"
 import { WikilinkDocumentLinkProvider } from "./features/DocumentLinkProvider"
 import { WikilinkCompletionProvider } from "./features/CompletionProvider"
+import { registerFileRenameHandler } from "./features/FileRenameHandler"
 import { registerOpenDocumentCommand } from "./commands/openDocumentByReference"
 import { registerAddFrontmatterCommand } from "./commands/addFrontmatter"
 
@@ -30,6 +31,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       "[" // Trigger on [
     )
   )
+
+  // Register file rename handler to auto-update wikilinks
+  registerFileRenameHandler(context)
 
   // Register commands
   registerOpenDocumentCommand(context)
