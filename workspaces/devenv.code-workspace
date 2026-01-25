@@ -19,6 +19,15 @@
 		{
 			"name": "litellm-copilot",
 			"path": "../../code/jonmagic/litellm-copilot"
+		},
+		{
+			"path": "../../Brain"
+		},
+		{
+			"path": "../../code/jonmagic/scripts"
+		},
+		{
+			"path": "../../code/jonmagic/prompts"
 		}
 	],
 	"settings": {}
