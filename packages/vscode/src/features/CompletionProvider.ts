@@ -1,11 +1,11 @@
 // CompletionProvider for wikilink autocompletion.
 // Triggers on [[ and provides a list of files to link to.
 // Shows 10 most recently modified files first, then all files filtered by input.
-// Rewrites to UID format when the target file has a UID.
+// Inserts full path-based links: [[Full/Path/To/File]]
 
 import * as vscode from "vscode"
 import * as fs from "node:fs"
-import { pathToDisplayPath, formatWikilink } from "@jonmagic/brain-core"
+import { pathToDisplayPath } from "@jonmagic/brain-core"
 import { getWorkspaceCache, type CachedFile } from "../cache/workspaceCache"
 
 export class WikilinkCompletionProvider implements vscode.CompletionItemProvider {
@@ -75,12 +75,6 @@ export class WikilinkCompletionProvider implements vscode.CompletionItemProvider
         vscode.CompletionItemKind.File
       )
 
-      // The text to insert - just the inner content, not the brackets
-      // Because we'll replace from [[ and include any trailing ]]
-      const innerText = file.uid
-        ? `uid:${file.uid}|${displayPath}`
-        : displayPath
-
       // Calculate the range to replace - from [[ to cursor, plus any trailing ]]
       const lineText = document.lineAt(position.line).text
       const replaceStart = new vscode.Position(
@@ -97,8 +91,8 @@ export class WikilinkCompletionProvider implements vscode.CompletionItemProvider
 
       const replaceRange = new vscode.Range(replaceStart, replaceEnd)
 
-      // Insert full wikilink including brackets
-      item.insertText = `[[${innerText}]]`
+      // Insert full path-based wikilink (no UID prefix)
+      item.insertText = `[[${displayPath}]]`
       item.range = replaceRange
 
       // Sort text: pad with zeros to maintain order
@@ -109,11 +103,6 @@ export class WikilinkCompletionProvider implements vscode.CompletionItemProvider
 
       // Filter text: match on path
       item.filterText = `[[${displayPath}`
-
-      // Detail shows if file has UID
-      if (file.uid) {
-        item.detail = `uid: ${file.uid}`
-      }
 
       // Documentation will be filled in by resolveCompletionItem (leave unset)
 

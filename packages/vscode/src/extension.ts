@@ -4,7 +4,6 @@ import { createDailyProjectNote } from "@jonmagic/brain-core"
 import { getWorkspaceCache, disposeWorkspaceCache } from "./cache/workspaceCache"
 import { WikilinkDocumentLinkProvider } from "./features/DocumentLinkProvider"
 import { WikilinkCompletionProvider } from "./features/CompletionProvider"
-import { WikilinkDecorator } from "./features/WikilinkDecorator"
 import { registerOpenDocumentCommand } from "./commands/openDocumentByReference"
 import { registerAddFrontmatterCommand } from "./commands/addFrontmatter"
 
@@ -31,10 +30,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       "[" // Trigger on [
     )
   )
-
-  // Activate wikilink decorator to hide uid: prefix visually
-  const decorator = new WikilinkDecorator()
-  decorator.activate(context)
 
   // Register commands
   registerOpenDocumentCommand(context)
