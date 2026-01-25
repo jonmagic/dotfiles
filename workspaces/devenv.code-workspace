@@ -2,19 +2,23 @@
 	"folders": [
 		{
 			"name": ".dotfiles",
-			"path": "/Users/jonmagic/.dotfiles"
+			"path": ".."
 		},
 		{
 			"name": ".claude",
-			"path": "/Users/jonmagic/.claude"
+			"path": "../../.claude"
 		},
 		{
 			"name": ".copilot",
-			"path": "/Users/jonmagic/.copilot"
+			"path": "../../.copilot"
+		},
+		{
+			"name": ".mcp",
+			"path": "../../.mcp"
 		},
 		{
 			"name": "litellm-copilot",
-			"path": "/Users/jonmagic/code/jonmagic/litellm-copilot"
+			"path": "../../code/jonmagic/litellm-copilot"
 		}
 	],
 	"settings": {}
