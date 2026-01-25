@@ -5,6 +5,7 @@ import { getWorkspaceCache, disposeWorkspaceCache } from "./cache/workspaceCache
 import { WikilinkDocumentLinkProvider } from "./features/DocumentLinkProvider"
 import { WikilinkCompletionProvider } from "./features/CompletionProvider"
 import { registerOpenDocumentCommand } from "./commands/openDocumentByReference"
+import { registerAddFrontmatterCommand } from "./commands/addFrontmatter"
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   // Initialize workspace cache
@@ -30,8 +31,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     )
   )
 
-  // Register open document by reference command
+  // Register commands
   registerOpenDocumentCommand(context)
+  registerAddFrontmatterCommand(context)
 
   // Register daily project note command
   const createNoteDisposable = vscode.commands.registerCommand(

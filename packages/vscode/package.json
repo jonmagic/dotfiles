@@ -1,7 +1,7 @@
 {
   "name": "jonmagic-brain",
   "displayName": "Jonmagic Brain",
-  "description": "Utilities for my Brain repo (Daily Projects, etc.)",
+  "description": "Utilities for my Brain repo (Daily Projects, wikilinks, etc.)",
   "version": "0.0.0",
   "publisher": "jonmagic",
   "repository": {
@@ -14,7 +14,7 @@
     "vscode": "^1.90.0"
   },
   "activationEvents": [
-    "onCommand:jonmagic.brain.createDailyProjectNote"
+    "onLanguage:markdown"
   ],
   "categories": ["Other"],
   "main": "./dist/extension.js",
@@ -23,6 +23,10 @@
       {
         "command": "jonmagic.brain.createDailyProjectNote",
         "title": "Jonmagic: Create Daily Project Note"
+      },
+      {
+        "command": "jonmagic.brain.addFrontmatter",
+        "title": "Jonmagic: Add Frontmatter to Current File"
       }
     ]
   },
