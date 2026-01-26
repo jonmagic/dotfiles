@@ -35,9 +35,6 @@ if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/
   ~/.dotfiles/themes/import.sh
 fi
 
-echo "-> Importing iTerm2 settings"
-~/.dotfiles/iterm/import.sh
-
 if [ ! -d ~/github ]; then
   echo "-> Creating ~/github directory"
   mkdir -p ~/github
