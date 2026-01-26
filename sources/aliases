@@ -30,9 +30,15 @@ if [[ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]]; then
   alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 fi
 
-# Archive Zoom meeting
+# Archive meeting
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
-  alias am='~/code/jonmagic/scripts/bin/archive-meeting --transcripts-dir ~/Documents/Zoom/ --target-dir ~/Brain --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md'
+  am() {
+    ~/code/jonmagic/scripts/bin/archive-meeting \
+      --brain-dir ~/Brain \
+      --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md \
+      --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md \
+      "$@"
+  }
 fi
 
 # Create semantic commit
