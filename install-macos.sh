@@ -12,6 +12,8 @@ if [ ! -d ~/.dotfiles ]; then
 fi
 
 ~/.dotfiles/gitconfig/setup.sh
+~/.dotfiles/ghostty/setup.sh
+~/.dotfiles/mise-config/setup.sh
 
 echo "-> Downloading latest antigen.zsh"
 curl -sL git.io/antigen > ~/.dotfiles/antigen.zsh

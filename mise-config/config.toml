@@ -1,0 +1,17 @@
+# Global mise configuration (managed by ~/.dotfiles)
+#
+# This file is intentionally minimal to avoid changing behavior for existing
+# asdf-based projects.
+#
+# Notes:
+# - Our shell init disables reading `.tool-versions` by default via:
+#   MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=none
+# - Add per-project tool versions with a `mise.toml` in that project.
+
+[settings]
+# Prevent surprising installs when a command is missing.
+not_found_auto_install = false
+
+[tools]
+# Add global tools here with `mise use -g` once you're ready.
+# (Recommend starting with non-overlapping CLIs like ripgrep/ruff/etc.)

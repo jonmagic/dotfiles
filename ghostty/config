@@ -1,0 +1,54 @@
+# --- Appearance ------------------------------------------------------
+
+# Built-in themes; adjust these once things are working.
+# Run `ghostty +list-themes` to see the exact names on your install.
+theme = "light:Dayfox,dark:Niji"
+
+# Slight transparency option (0.0-1.0). Set to 1.0 for fully opaque.
+background-opacity = 1.0
+
+# Retro pixel-ish font (pick your favorite here)
+font-family = "Liga SFMono Nerd Font"
+font-size = 15
+
+# Solid block cursor, no blink
+cursor-style = block
+cursor-style-blink = false
+
+# Hide the mouse pointer while typing
+mouse-hide-while-typing = true
+
+# --- Behavior / performance -----------------------------------------
+
+# Scrollback in bytes (~100MB)
+scrollback-limit = 100000000
+
+# Let zsh hooks control tab titles (not Ghostty's built-in)
+shell-integration-features = no-title
+
+# --- Mac-specific niceties ------------------------------------------
+
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+auto-update = download
+
+# --- Keybindings (just a few ergonomic ones) ------------------------
+
+# New split panes (same as defaults, but explicit)
+keybind = cmd+d=new_split:right
+keybind = cmd+shift+d=new_split:down
+
+# Navigate between splits with option + arrows
+keybind = opt+left=goto_split:left
+keybind = opt+right=goto_split:right
+keybind = opt+up=goto_split:top
+keybind = opt+down=goto_split:bottom
+
+# Tabs
+keybind = cmd+t=new_tab
+keybind = cmd+w=close_surface
+keybind = cmd+shift+left_bracket=previous_tab
+keybind = cmd+shift+right_bracket=next_tab
+
+# Quick "big log" escape hatch: dump scrollback to a temp file and open in default editor
+keybind = cmd+shift+f=write_scrollback_file:open

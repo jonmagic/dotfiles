@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Update all software on this machine using Copilot CLI as the orchestrator.
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "Error: gh CLI is required but not found on PATH."
+  exit 1
+fi
+
+BREWFILE="$HOME/.dotfiles/brew/Brewfile"
+
+exec gh copilot -p "
+You are a software update assistant running on macOS. Run each of the following
+update steps in order. For each step, print a header like '==> Step Name' before
+running the commands. If a tool is not installed, print a note and skip that step.
+Continue to the next step even if one fails.
+
+1. Upgrade antigen plugins: run 'antigen update'
+2. Upgrade gh extensions: run 'gh extension upgrade --all'
+3. Upgrade asdf plugins: run 'asdf plugin update --all'
+4. Upgrade global npm packages: run 'npm update -g'
+5. Upgrade mise packages: run 'mise upgrade'
+6. Upgrade Homebrew: run 'brew update && brew outdated && brew upgrade && brew bundle cleanup --force --no-vscode --file=$BREWFILE'
+7. Upgrade Mac App Store apps: run 'mas upgrade'
+8. Upgrade Copilot CLI: run 'gh copilot -- update'
+
+After all steps complete, print a brief summary of what was updated and what was
+skipped.
+" --allow-tool shell --disable-builtin-mcps --no-ask-user --model claude-sonnet-4.5

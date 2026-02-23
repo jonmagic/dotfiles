@@ -57,5 +57,13 @@ safe_source "$HOME/.dotfiles/sources/functions.zsh"
 safe_source "$HOME/.dotfiles/sources/env_variables"
 safe_source "$HOME/.dotfiles/sources/env_secrets"
 safe_source "$HOME/.dotfiles/sources/terminal"
+safe_source "$HOME/.dotfiles/sources/ghostty-colors.zsh"
+safe_source "$HOME/.dotfiles/sources/mise.zsh"
 # safe_source $HOME/.config/op/plugins.sh
 # safe_source $HOME/.cargo/env
+
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/jonmagic/.docker/completions $fpath)
+autoload -Uz compinit
+compinit
+# End of Docker CLI completions

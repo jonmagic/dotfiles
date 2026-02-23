@@ -1,0 +1,128 @@
+#!/bin/bash
+set -euo pipefail
+
+# vibe-build-binaries — Cross-compile Go binaries for linux/arm64 vibe VMs
+#
+# Usage:
+#   vibe-build-binaries                Build all platform-health binaries
+#   vibe-build-binaries kafka-lite     Build only kafka-lite
+#   vibe-build-binaries --clean        Remove cached binaries and rebuild
+#
+# Binaries are cached at ~/.cache/vibe/binaries/
+# Repos are expected in ~/github/<name>/ — cloned automatically if missing.
+
+CACHE_DIR="$HOME/.cache/vibe/binaries"
+GITHUB_DIR="$HOME/github"
+
+GOOS_TARGET="linux"
+GOARCH_TARGET="arm64"
+
+log() { echo "==> $*"; }
+err() { echo "error: $*" >&2; exit 1; }
+
+# Returns "repo|build_target" for a given binary name
+binary_spec() {
+    case "$1" in
+        kafka-lite)           echo "kafka-lite|main.go" ;;
+        aqueduct-lite)        echo "aqueduct-lite|./cmd/server" ;;
+        aqueduct-bridge-lite) echo "aqueduct-bridge-lite|." ;;
+        *) err "unknown binary: $1" ;;
+    esac
+}
+
+# Which binaries the platform-health stack needs
+PLATFORM_HEALTH_BINS="kafka-lite aqueduct-lite aqueduct-bridge-lite"
+
+ensure_repo() {
+    local name="$1"
+    local repo_dir="$GITHUB_DIR/$name"
+    if [ -d "$repo_dir/.git" ]; then
+        log "Repo $name found at $repo_dir"
+        return 0
+    fi
+    log "Cloning github/$name into $repo_dir..."
+    if command -v gh &>/dev/null; then
+        gh repo clone "github/$name" "$repo_dir" -- --depth 1
+    else
+        git clone --depth 1 "https://github.com/github/$name.git" "$repo_dir"
+    fi
+}
+
+build_binary() {
+    local name="$1"
+    local spec
+    spec="$(binary_spec "$name")"
+
+    local repo="${spec%%|*}"
+    local build_target="${spec##*|}"
+    local repo_dir="$GITHUB_DIR/$repo"
+    local output="$CACHE_DIR/$name"
+
+    ensure_repo "$repo"
+
+    log "Building $name (linux/arm64)"
+    cd "$repo_dir"
+
+    GOOS="$GOOS_TARGET" GOARCH="$GOARCH_TARGET" CGO_ENABLED=0 \
+        go build -trimpath -o "$output" "$build_target"
+
+    chmod +x "$output"
+    local size
+    size="$(du -h "$output" | awk '{print $1}')"
+    log "  Built $name ($size) -> $output"
+    cd - > /dev/null
+}
+
+# --- Main ---
+
+clean=false
+targets=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --clean)
+            clean=true
+            shift
+            ;;
+        --help|-h)
+            sed -n '3,10s/^# \{0,1\}//p' "$0"
+            exit 0
+            ;;
+        *)
+            targets="$targets $1"
+            shift
+            ;;
+    esac
+done
+
+# Default to all platform-health binaries
+if [ -z "$targets" ]; then
+    targets="$PLATFORM_HEALTH_BINS"
+fi
+
+# Clean if requested
+if [ "$clean" = true ]; then
+    log "Cleaning cached binaries"
+    rm -rf "$CACHE_DIR"
+fi
+
+mkdir -p "$CACHE_DIR"
+
+# Build each target
+built=0
+skipped=0
+for name in $targets; do
+    output="$CACHE_DIR/$name"
+    if [ -f "$output" ] && [ "$clean" = false ]; then
+        log "$name already cached at $output (use --clean to rebuild)"
+        skipped=$((skipped + 1))
+        continue
+    fi
+    build_binary "$name"
+    built=$((built + 1))
+done
+
+echo ""
+log "Done: $built built, $skipped cached"
+echo "  Binaries at: $CACHE_DIR/"
+ls -lh "$CACHE_DIR/"

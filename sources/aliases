@@ -105,3 +105,8 @@ fi
 if command_exists "/opt/homebrew/bin/llm"; then
   alias llm='/opt/homebrew/bin/llm'
 fi
+
+# opencode
+if command_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"; then
+  alias opencode="$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"
+fi

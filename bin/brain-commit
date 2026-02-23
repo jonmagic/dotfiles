@@ -1,0 +1,37 @@
+#!/bin/bash
+set -euo pipefail
+
+export PATH="/opt/homebrew/bin:/usr/bin:/bin"
+. /opt/homebrew/opt/asdf/libexec/asdf.sh
+LOCK="/tmp/brain-commit.lock"
+LOG="/tmp/brain-commit.log"
+TIMEOUT=120
+
+# Prevent overlapping runs
+if [ -f "$LOCK" ]; then
+  pid=$(cat "$LOCK")
+  if kill -0 "$pid" 2>/dev/null; then
+    echo "$(date): skipping, previous run (pid $pid) still active" >> "$LOG"
+    exit 0
+  fi
+  rm -f "$LOCK"
+fi
+
+echo $$ > "$LOCK"
+trap 'rm -f "$LOCK"' EXIT
+
+echo "$(date): starting brain commit" >> "$LOG"
+timeout "$TIMEOUT" copilot \
+  --available-tools bash read_bash write_bash stop_bash list_bash view glob grep \
+  --allow-all-tools \
+  --add-dir ~/Brain \
+  -p "brain commit" >> "$LOG" 2>&1
+status=$?
+
+if [ $status -eq 124 ]; then
+  echo "$(date): timed out after ${TIMEOUT}s" >> "$LOG"
+elif [ $status -ne 0 ]; then
+  echo "$(date): exited with status $status" >> "$LOG"
+else
+  echo "$(date): completed successfully" >> "$LOG"
+fi
