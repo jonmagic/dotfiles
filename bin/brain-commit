@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-export PATH="/opt/homebrew/bin:/usr/bin:/bin"
-. /opt/homebrew/opt/asdf/libexec/asdf.sh
+export PATH="$HOME/.asdf/installs/nodejs/25.2.1/bin:/opt/homebrew/bin:/usr/bin:/bin"
+ssh-add --apple-use-keychain ~/.ssh/jonmagic_github 2>/dev/null || true
+COPILOT="$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"
 LOCK="/tmp/brain-commit.lock"
 LOG="/tmp/brain-commit.log"
 TIMEOUT=120
@@ -21,14 +22,40 @@ echo $$ > "$LOCK"
 trap 'rm -f "$LOCK"' EXIT
 
 echo "$(date): starting brain commit" >> "$LOG"
-timeout "$TIMEOUT" copilot \
-  --available-tools bash read_bash write_bash stop_bash list_bash view glob grep \
+cd "$HOME/Brain" || exit 1
+
+# Skip if nothing to commit
+if [ -z "$(git status --porcelain)" ]; then
+  git pull --rebase --autostash >> "$LOG" 2>&1 || {
+    echo "$(date): pull had conflicts or errors, aborting rebase" >> "$LOG"
+    git rebase --abort >> "$LOG" 2>&1 || true
+  }
+  echo "$(date): nothing to commit" >> "$LOG"
+  exit 0
+fi
+
+"$COPILOT" \
+  --available-tools bash read_bash write_bash stop_bash list_bash view glob grep skill \
+  --disable-builtin-mcps \
+  --disable-mcp-server datadog \
+  --disable-mcp-server Sentry \
   --allow-all-tools \
   --add-dir ~/Brain \
-  -p "brain commit" >> "$LOG" 2>&1
+  -p "brain commit" >> "$LOG" 2>&1 &
+copilot_pid=$!
+
+# Kill copilot if it exceeds the timeout
+(sleep "$TIMEOUT" && kill "$copilot_pid" 2>/dev/null) &
+timer_pid=$!
+
+wait "$copilot_pid" 2>/dev/null
 status=$?
 
-if [ $status -eq 124 ]; then
+# Cancel the timer if copilot finished in time
+kill "$timer_pid" 2>/dev/null
+wait "$timer_pid" 2>/dev/null
+
+if [ $status -eq 143 ]; then
   echo "$(date): timed out after ${TIMEOUT}s" >> "$LOG"
 elif [ $status -ne 0 ]; then
   echo "$(date): exited with status $status" >> "$LOG"

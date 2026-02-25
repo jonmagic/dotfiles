@@ -1,0 +1,99 @@
+#!/usr/bin/env zsh
+set -uo pipefail
+
+# Update all software on this machine, then hand the output to Copilot CLI
+# for analysis and follow-up.
+
+BREWFILE="$HOME/.dotfiles/brew/Brewfile"
+LOG=$(mktemp)
+trap "rm -f $LOG" EXIT
+
+# Tee all output so the user sees it live AND we capture it for Copilot.
+{
+  run_step() {
+    local name="$1"
+    shift
+    echo "==> $name"
+    "$@"
+    echo ""
+  }
+
+  skip_step() {
+    local name="$1"
+    local reason="$2"
+    echo "==> $name"
+    echo "$reason; skipping."
+    echo ""
+  }
+
+  # 1. Antigen (requires interactive zsh with full dotfiles loaded)
+  skip_step "Upgrading antigen plugins" "antigen requires interactive shell; run 'antigen update' manually"
+
+  # 2. gh extensions
+  if command -v gh &>/dev/null; then
+    run_step "Upgrading gh extensions" gh extension upgrade --all
+  else
+    skip_step "Upgrading gh extensions" "GitHub CLI not installed"
+  fi
+
+  # 3. asdf plugins
+  if command -v asdf &>/dev/null; then
+    run_step "Upgrading asdf plugins" asdf plugin update --all
+  else
+    skip_step "Upgrading asdf plugins" "asdf not installed"
+  fi
+
+  # 4. Global npm packages
+  if command -v npm &>/dev/null; then
+    run_step "Upgrading global npm packages" npm update -g
+  else
+    skip_step "Upgrading global npm packages" "npm not installed"
+  fi
+
+  # 5. mise packages
+  if command -v mise &>/dev/null; then
+    run_step "Upgrading mise packages" mise upgrade
+  else
+    skip_step "Upgrading mise packages" "mise not installed"
+  fi
+
+  # 6. Homebrew
+  if command -v brew &>/dev/null; then
+    echo "==> Upgrading homebrew"
+    brew update && brew outdated && brew upgrade && brew bundle cleanup --force --no-vscode --file="$BREWFILE"
+    echo ""
+  else
+    skip_step "Upgrading homebrew" "Homebrew not installed"
+  fi
+
+  # 7. Mac App Store
+  if command -v mas &>/dev/null; then
+    run_step "Upgrading Mac App Store apps" mas upgrade
+  else
+    skip_step "Upgrading Mac App Store apps" "mas CLI not installed"
+  fi
+
+  # 8. Copilot CLI
+  if command -v gh &>/dev/null; then
+    run_step "Upgrading Copilot CLI" gh copilot -- update
+  else
+    skip_step "Upgrading Copilot CLI" "GitHub CLI not installed"
+  fi
+
+} 2>&1 | tee "$LOG"
+
+# Phase 2: Hand the captured output to Copilot for analysis and follow-ups.
+echo ""
+echo "==> Analyzing update results with Copilot..."
+echo ""
+
+gh copilot -p "
+Here is the output from my software update script. Please:
+1. Summarize what was updated, what was already up to date, and what was skipped.
+2. Flag any errors, warnings, or deprecation notices that need attention.
+3. If there are actionable follow-up items (e.g. deprecated packages to replace,
+   failed updates to retry, security notices), list them clearly.
+
+Output:
+$(cat "$LOG")
+" --allow-tool shell --disable-builtin-mcps --no-ask-user --model claude-sonnet-4.5
