@@ -107,6 +107,10 @@ if command_exists "/opt/homebrew/bin/llm"; then
 fi
 
 # opencode
+# if executable_exists "/opt/homebrew/bin/bun"; then
+#   alias ocnext='OPENCODE_MCP_TOOL_SEARCH=1 CONTEXT_MODE=1 ~/code/anomalyco/opencode/packages/opencode/dist/opencode-darwin-arm64/bin/opencode'
+#   alias opencode='~/code/anomalyco/opencode/packages/opencode/dist/opencode-darwin-arm64/bin/opencode'
+# fi
 if command_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"; then
   alias opencode="$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"
 fi

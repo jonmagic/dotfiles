@@ -6,4 +6,6 @@ if [[ $OSTYPE == darwin* ]]; then
   export GOMODCACHE="$HOME/code/go/pkg/mod"        # module cache
   export GOCACHE="$HOME/code/.cache/go/go-build"   # build cache
   export GOBIN="$HOME/code/go/bin"                 # where `go install` puts binaries
+
+  export ONECLI_API_HOST=http://localhost:10254
 fi
