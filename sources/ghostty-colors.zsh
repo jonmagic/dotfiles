@@ -79,9 +79,11 @@ typeset -ga _GTC_SSH_COLORS_LIGHT=(
   "#f6e4e4"   # deep red
 )
 
-# Default backgrounds from the Ghostty themes
+# Default surface colors from the Ghostty themes
 _GTC_DEFAULT_BG_DARK="#141515"    # Niji
 _GTC_DEFAULT_BG_LIGHT="#f6f2ee"   # Dayfox
+_GTC_DEFAULT_FG_DARK="#cfcfd1"    # Niji foreground
+_GTC_DEFAULT_FG_LIGHT="#3d2b5a"   # Dayfox foreground
 
 # Emojis -- indexed by hash to visually distinguish tabs
 typeset -ga _GTC_PROJECT_DOTS=( 🔷 🍀 🔮 🌰 ⭐ 💎 🌿 🌕 🪻 🧊 🎯 🍃 )
@@ -126,6 +128,14 @@ _gtc_default_bg() {
   fi
 }
 
+_gtc_default_fg() {
+  if [[ "$1" == "dark" ]]; then
+    echo "$_GTC_DEFAULT_FG_DARK"
+  else
+    echo "$_GTC_DEFAULT_FG_LIGHT"
+  fi
+}
+
 # Shorten paths for tab titles:
 #   /Users/jon/code/foo/bar  -> ~/code/foo/bar
 #   /Users/jon               -> ~
@@ -141,6 +151,17 @@ _gtc_short_cwd() {
 
 _gtc_set_bg() {
   printf '\033]11;%s\007' "$1"
+}
+
+_gtc_set_fg() {
+  printf '\033]10;%s\007' "$1"
+}
+
+_gtc_apply_colors() {
+  local appearance="$1"
+  local bg="$2"
+  _gtc_set_fg "$(_gtc_default_fg "$appearance")"
+  _gtc_set_bg "$bg"
 }
 
 _gtc_set_title() {
@@ -216,7 +237,7 @@ _gtc_chpwd() {
   if [[ "$PWD" == "$HOME" ]]; then
     _GTC_CURRENT_IDX=""
     _GTC_CURRENT_DOT=""
-    _gtc_set_bg "$(_gtc_default_bg "$appearance")"
+    _gtc_apply_colors "$appearance" "$(_gtc_default_bg "$appearance")"
     _gtc_set_title "${_GTC_HOST_PREFIX}~"
     return
   fi
@@ -239,9 +260,9 @@ _gtc_chpwd() {
 
   # Apply color for current appearance
   if [[ "$appearance" == "dark" ]]; then
-    _gtc_set_bg "${_GTC_PROJECT_COLORS_DARK[$zsh_idx]}"
+    _gtc_apply_colors "$appearance" "${_GTC_PROJECT_COLORS_DARK[$zsh_idx]}"
   else
-    _gtc_set_bg "${_GTC_PROJECT_COLORS_LIGHT[$zsh_idx]}"
+    _gtc_apply_colors "$appearance" "${_GTC_PROJECT_COLORS_LIGHT[$zsh_idx]}"
   fi
 
   _gtc_set_title "$_GTC_CURRENT_DOT ${_GTC_HOST_PREFIX}$(_gtc_short_cwd)"
@@ -255,32 +276,30 @@ _gtc_precmd() {
   # Re-assert title so other programs can't permanently overwrite it
   [[ -n "$_GTC_CURRENT_TITLE" ]] && printf '\033]2;%s\007' "$_GTC_CURRENT_TITLE"
 
-  # Detect dark/light mode changes and re-apply background color
+  # Re-assert colors so config reloads or full-screen apps can't leave the
+  # shell on the wrong foreground/background pairing.
   local appearance="$(_gtc_appearance)"
-  if [[ "$appearance" != "$_GTC_LAST_APPEARANCE" ]]; then
-    _GTC_LAST_APPEARANCE="$appearance"
+  _GTC_LAST_APPEARANCE="$appearance"
 
-    if [[ -n "$_GTC_SSH_ACTIVE" ]]; then
-      # Re-apply SSH color with new palette
-      # (SSH idx is stored in _GTC_CURRENT_IDX during ssh wrapper)
-      if [[ -n "$_GTC_CURRENT_IDX" ]]; then
-        if [[ "$appearance" == "dark" ]]; then
-          _gtc_set_bg "${_GTC_SSH_COLORS_DARK[$_GTC_CURRENT_IDX]}"
-        else
-          _gtc_set_bg "${_GTC_SSH_COLORS_LIGHT[$_GTC_CURRENT_IDX]}"
-        fi
-      fi
-    elif [[ -n "$_GTC_CURRENT_IDX" ]]; then
-      # Re-apply project color with new palette
+  if [[ -n "$_GTC_SSH_ACTIVE" ]]; then
+    # Re-apply SSH color with the current palette.
+    if [[ -n "$_GTC_CURRENT_IDX" ]]; then
       if [[ "$appearance" == "dark" ]]; then
-        _gtc_set_bg "${_GTC_PROJECT_COLORS_DARK[$_GTC_CURRENT_IDX]}"
+        _gtc_apply_colors "$appearance" "${_GTC_SSH_COLORS_DARK[$_GTC_CURRENT_IDX]}"
       else
-        _gtc_set_bg "${_GTC_PROJECT_COLORS_LIGHT[$_GTC_CURRENT_IDX]}"
+        _gtc_apply_colors "$appearance" "${_GTC_SSH_COLORS_LIGHT[$_GTC_CURRENT_IDX]}"
       fi
-    else
-      # Default bg (home dir or uncolored)
-      _gtc_set_bg "$(_gtc_default_bg "$appearance")"
     fi
+  elif [[ -n "$_GTC_CURRENT_IDX" ]]; then
+    # Re-apply project color with the current palette.
+    if [[ "$appearance" == "dark" ]]; then
+      _gtc_apply_colors "$appearance" "${_GTC_PROJECT_COLORS_DARK[$_GTC_CURRENT_IDX]}"
+    else
+      _gtc_apply_colors "$appearance" "${_GTC_PROJECT_COLORS_LIGHT[$_GTC_CURRENT_IDX]}"
+    fi
+  else
+    # Default surface colors (home dir or uncolored).
+    _gtc_apply_colors "$appearance" "$(_gtc_default_bg "$appearance")"
   fi
 }
 
@@ -313,9 +332,9 @@ ssh() {
     _GTC_CURRENT_DOT="${_GTC_SSH_DOTS[$idx]}"
 
     if [[ "$appearance" == "dark" ]]; then
-      _gtc_set_bg "${_GTC_SSH_COLORS_DARK[$idx]}"
+      _gtc_apply_colors "$appearance" "${_GTC_SSH_COLORS_DARK[$idx]}"
     else
-      _gtc_set_bg "${_GTC_SSH_COLORS_LIGHT[$idx]}"
+      _gtc_apply_colors "$appearance" "${_GTC_SSH_COLORS_LIGHT[$idx]}"
     fi
     _gtc_set_title "$_GTC_CURRENT_DOT $short"
   fi
