@@ -1,0 +1,20 @@
+#!/bin/bash
+
+TAILSCALE="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+OPENCODE="$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"
+PORT=4096
+TAILSCALE_IP=$($TAILSCALE ip -4)
+
+cleanup() {
+  $TAILSCALE serve reset
+}
+trap cleanup EXIT
+
+# Start tailscale serve in background to proxy the tailscale IP with HTTPS
+$TAILSCALE serve --bg --https=443 http://$TAILSCALE_IP:$PORT
+
+# Start opencode web bound to the tailscale IP
+BROWSER=none \
+OPENCODE_SERVER_USERNAME="jonmagic@gmail.com" \
+OPENCODE_SERVER_PASSWORD=$(op read "op://Shared/OpenCode Server/password") \
+$OPENCODE web --hostname "$TAILSCALE_IP" --port $PORT
