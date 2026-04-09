@@ -6,7 +6,32 @@ ssh-add --apple-use-keychain ~/.ssh/jonmagic_github 2>/dev/null || true
 COPILOT="$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"
 LOCK="/tmp/brain-commit.lock"
 LOG="/tmp/brain-commit.log"
-TIMEOUT=120
+TIMEOUT=300
+RUN_SENTINEL=""
+
+cleanup() {
+  rm -f "$LOCK"
+  if [ -n "${RUN_SENTINEL:-}" ] && [ -f "$RUN_SENTINEL" ]; then
+    rm -f "$RUN_SENTINEL"
+  fi
+}
+
+cleanup_copilot_run_artifacts() {
+  if [ -z "${RUN_SENTINEL:-}" ] || [ ! -f "$RUN_SENTINEL" ]; then
+    return
+  fi
+
+  find "$HOME/.copilot/session-state" -maxdepth 1 -mindepth 1 -type d -newer "$RUN_SENTINEL" -print0 2>/dev/null | \
+    while IFS= read -r -d '' session_dir; do
+      workspace_file="$session_dir/workspace.yaml"
+      if [ -f "$workspace_file" ] && \
+         grep -Fq 'cwd: /Users/jonmagic/Brain' "$workspace_file" && \
+         grep -Fq 'summary: commit brain' "$workspace_file"; then
+        rm -rf "$session_dir"
+        echo "$(date): removed copilot session state $session_dir" >> "$LOG"
+      fi
+    done
+}
 
 # Prevent overlapping runs
 if [ -f "$LOCK" ]; then
@@ -19,10 +44,13 @@ if [ -f "$LOCK" ]; then
 fi
 
 echo $$ > "$LOCK"
-trap 'rm -f "$LOCK"' EXIT
+trap cleanup EXIT
 
 echo "$(date): starting brain commit" >> "$LOG"
 cd "$HOME/Brain" || exit 1
+
+# Keep Copilot's shared home for auth and installed skills, but trim old daemon logs.
+find "$HOME/.copilot/logs" -maxdepth 1 -type f -name 'process-*.log' -mtime +7 -delete 2>/dev/null || true
 
 # Skip if nothing to commit
 if [ -z "$(git status --porcelain)" ]; then
@@ -34,26 +62,63 @@ if [ -z "$(git status --porcelain)" ]; then
   exit 0
 fi
 
-"$COPILOT" \
-  --available-tools bash read_bash write_bash stop_bash list_bash view glob grep skill \
+GH_AUTH_TOKEN=""
+GH_AUTH_SOURCE=""
+if command -v gh >/dev/null 2>&1; then
+  GH_AUTH_TOKEN="$(gh auth token 2>/dev/null || true)"
+  if [ -n "$GH_AUTH_TOKEN" ]; then
+    GH_AUTH_SOURCE="gh cli"
+  fi
+fi
+
+if [ -z "$GH_AUTH_TOKEN" ] && command -v security >/dev/null 2>&1; then
+  GH_AUTH_TOKEN="$(security find-generic-password -s "gh:${GH_HOST:-github.com}" -a "${USER}" -w 2>/dev/null || true)"
+  if [ -n "$GH_AUTH_TOKEN" ]; then
+    GH_AUTH_SOURCE="keychain gh"
+  fi
+fi
+
+if [ -z "$GH_AUTH_TOKEN" ] && command -v security >/dev/null 2>&1; then
+  GH_AUTH_TOKEN="$(security find-internet-password -s "${GH_HOST:-github.com}" -a "${USER}" -w 2>/dev/null || true)"
+  if [ -n "$GH_AUTH_TOKEN" ]; then
+    GH_AUTH_SOURCE="keychain internet"
+  fi
+fi
+
+copilot_env=()
+if [ -n "$GH_AUTH_TOKEN" ]; then
+  copilot_env+=("GH_TOKEN=$GH_AUTH_TOKEN")
+  echo "$(date): using ${GH_AUTH_SOURCE} token for copilot" >> "$LOG"
+else
+  echo "$(date): gh auth token unavailable, using default copilot home auth state" >> "$LOG"
+fi
+
+RUN_SENTINEL="$(mktemp "${TMPDIR:-/tmp}/brain-commit-sentinel.XXXXXX")"
+
+env "${copilot_env[@]}" "$COPILOT" \
+  --available-tools bash read_bash write_bash stop_bash list_bash view glob rg skill \
   --disable-builtin-mcps \
   --disable-mcp-server datadog \
   --disable-mcp-server Sentry \
   --allow-all-tools \
   --add-dir ~/Brain \
-  -p "brain commit" >> "$LOG" 2>&1 &
+  --add-dir ~/.copilot/skills/brain-commit \
+  -p "commit brain" >> "$LOG" 2>&1 &
 copilot_pid=$!
 
 # Kill copilot if it exceeds the timeout
 (sleep "$TIMEOUT" && kill "$copilot_pid" 2>/dev/null) &
 timer_pid=$!
 
-wait "$copilot_pid" 2>/dev/null
-status=$?
+if wait "$copilot_pid" 2>/dev/null; then
+  status=0
+else
+  status=$?
+fi
 
 # Cancel the timer if copilot finished in time
-kill "$timer_pid" 2>/dev/null
-wait "$timer_pid" 2>/dev/null
+kill "$timer_pid" 2>/dev/null || true
+wait "$timer_pid" 2>/dev/null || true
 
 if [ $status -eq 143 ]; then
   echo "$(date): timed out after ${TIMEOUT}s" >> "$LOG"
@@ -62,3 +127,5 @@ elif [ $status -ne 0 ]; then
 else
   echo "$(date): completed successfully" >> "$LOG"
 fi
+
+cleanup_copilot_run_artifacts
