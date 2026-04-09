@@ -12,10 +12,15 @@ trap "rm -f $LOG" EXIT
 {
   run_step() {
     local name="$1"
+    local step_status=0
     shift
     echo "==> $name"
-    "$@"
+    "$@" || step_status=$?
+    if (( step_status != 0 )); then
+      echo "Step failed with exit code $step_status."
+    fi
     echo ""
+    return 0
   }
 
   skip_step() {
@@ -26,8 +31,12 @@ trap "rm -f $LOG" EXIT
     echo ""
   }
 
-  # 1. Antigen (requires interactive zsh with full dotfiles loaded)
-  skip_step "Upgrading antigen plugins" "antigen requires interactive shell; run 'antigen update' manually"
+  # 1. Antigen
+  if [[ -f "$HOME/.dotfiles/sources/terminal" ]]; then
+    run_step "Upgrading antigen plugins" zsh -lc 'source "$HOME/.dotfiles/sources/terminal" && antigen update'
+  else
+    skip_step "Upgrading antigen plugins" "terminal config not found at ~/.dotfiles/sources/terminal"
+  fi
 
   # 2. gh extensions
   if command -v gh &>/dev/null; then
@@ -66,9 +75,74 @@ trap "rm -f $LOG" EXIT
     skip_step "Upgrading homebrew" "Homebrew not installed"
   fi
 
+  upgrade_mas_apps() {
+    local mas_bin=""
+    local outdated_apps=""
+    local outdated_status=0
+    local app_line=""
+    local app_id=""
+    local -a mas_cmd=()
+    local -a outdated_app_lines=()
+    local -a failed_apps=()
+
+    mas_bin="$(command -v mas)"
+    mas_cmd=(env MAS_NO_AUTO_INDEX=1 "$mas_bin")
+
+    outdated_apps="$("${mas_cmd[@]}" outdated 2>&1)"
+    outdated_status=$?
+
+    if (( outdated_status != 0 )); then
+      echo "$outdated_apps"
+      return $outdated_status
+    fi
+
+    if [[ -n "${outdated_apps//[[:space:]]/}" ]]; then
+      echo "$outdated_apps"
+    fi
+
+    while IFS= read -r app_line; do
+      [[ "$app_line" == <->\ * ]] || continue
+      outdated_app_lines+=("$app_line")
+    done <<< "$outdated_apps"
+
+    if (( ${#outdated_app_lines[@]} == 0 )); then
+      echo "All Mac App Store apps are up to date."
+      return 0
+    fi
+
+    if ! sudo -v; then
+      echo "Unable to authenticate sudo; skipping Mac App Store upgrades."
+      return 1
+    fi
+
+    for app_line in "${outdated_app_lines[@]}"; do
+      app_id="${app_line%% *}"
+
+      echo ""
+      echo "Updating $app_line"
+
+      if ! sudo env MAS_NO_AUTO_INDEX=1 "$mas_bin" upgrade "$app_id"; then
+        echo "Resetting App Store state and retrying $app_id..."
+        env MAS_NO_AUTO_INDEX=1 "$mas_bin" reset
+
+        if ! sudo env MAS_NO_AUTO_INDEX=1 "$mas_bin" upgrade "$app_id"; then
+          failed_apps+=("$app_line")
+        fi
+      fi
+    done
+
+    if (( ${#failed_apps[@]} != 0 )); then
+      echo ""
+      echo "Failed Mac App Store updates:"
+      printf ' - %s\n' "${failed_apps[@]}"
+      echo "These usually need a manual App Store retry or the Apple Account that originally installed the app."
+      return 1
+    fi
+  }
+
   # 7. Mac App Store
   if command -v mas &>/dev/null; then
-    run_step "Upgrading Mac App Store apps" mas upgrade
+    run_step "Upgrading Mac App Store apps" upgrade_mas_apps
   else
     skip_step "Upgrading Mac App Store apps" "mas CLI not installed"
   fi
