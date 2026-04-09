@@ -22,6 +22,7 @@ brew "cairo"
 brew "cassandra"
 brew "colima"
 brew "coreutils"
+brew "d2"
 brew "delve"
 brew "ffmpeg"
 brew "fzf"
@@ -100,7 +101,6 @@ brew "zig"
 cask "1password-cli"
 cask "battery"
 cask "claude-code"
-cask "docker"
 cask "font-sf-mono-nerd-font-ligaturized"
 cask "ghostty@tip"
 cask "git-credential-manager"
@@ -117,31 +117,26 @@ cask "visual-studio-code"
 mas "1Password for Safari", id: 1569813296
 mas "Acorn", id: 6737921844
 mas "Calca", id: 635758264
-mas "CrystalFetch", id: 6454431289
-mas "DaisyDisk", id: 411643860
-mas "Exif Editor Tool", id: 1632784836
-mas "Fantastical", id: 975937182
 mas "GarageBand", id: 682658836
-mas "GoArt NFT Creator", id: 1597217588
-mas "iFlicks", id: 408937559
 mas "iMovie", id: 408981434
-mas "In Your Face", id: 1476964367
 mas "Keynote", id: 409183694
 mas "Live Home 3D Pro", id: 1066145115
 mas "Numbers", id: 409203825
 mas "Okta Extension App", id: 1439967473
 mas "Okta Verify", id: 490179405
 mas "Pages", id: 409201541
-mas "Paprika Recipe Manager 3", id: 1303222628
 vscode "britesnow.vscode-toggle-quotes"
 vscode "bung87.rails"
 vscode "bung87.vscode-gemfile"
 vscode "editorconfig.editorconfig"
 vscode "github.codespaces"
+vscode "github.copilot-chat"
 vscode "github.copilot-workspace"
 vscode "github.vscode-pull-request-github"
 vscode "graphql.vscode-graphql"
 vscode "graphql.vscode-graphql-syntax"
+vscode "jonmagic.jonmagic-scripts"
+vscode "mermaidchart.vscode-mermaid-chart"
 vscode "ms-vscode-remote.remote-containers"
 vscode "ms-vscode.atom-keybindings"
 vscode "ms-vscode.wordcount"
