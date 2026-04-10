@@ -2,6 +2,7 @@
 set -euo pipefail
 
 export PATH="$HOME/.asdf/installs/nodejs/25.2.1/bin:/opt/homebrew/bin:/usr/bin:/bin"
+export GIT_TERMINAL_PROMPT=0
 ssh-add --apple-use-keychain ~/.ssh/jonmagic_github 2>/dev/null || true
 COPILOT="$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"
 LOCK="/tmp/brain-commit.lock"
@@ -102,7 +103,7 @@ fi
 RUN_SENTINEL="$(mktemp "${TMPDIR:-/tmp}/brain-commit-sentinel.XXXXXX")"
 
 env "${copilot_env[@]}" "$COPILOT" \
-  --available-tools bash read_bash write_bash stop_bash list_bash view glob rg skill \
+  --available-tools bash read_bash write_bash stop_bash list_bash view glob grep skill \
   --disable-builtin-mcps \
   --disable-mcp-server datadog \
   --disable-mcp-server Sentry \
