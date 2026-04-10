@@ -58,6 +58,12 @@ if [ -z "$(git status --porcelain)" ]; then
     echo "$(date): pull had conflicts or errors, aborting rebase" >> "$LOG"
     git rebase --abort >> "$LOG" 2>&1 || true
   }
+  # Push any committed-but-unpushed changes
+  if [ -n "$(git log origin/main..HEAD --oneline 2>/dev/null)" ]; then
+    git push >> "$LOG" 2>&1 && \
+      echo "$(date): pushed unpushed commits" >> "$LOG" || \
+      echo "$(date): push failed" >> "$LOG"
+  fi
   echo "$(date): nothing to commit" >> "$LOG"
   exit 0
 fi
@@ -102,7 +108,7 @@ env "${copilot_env[@]}" "$COPILOT" \
   --disable-mcp-server Sentry \
   --allow-all-tools \
   --add-dir ~/Brain \
-  --add-dir ~/.copilot/skills/brain-commit \
+  --add-dir ~/.copilot/skills/brain \
   -p "commit brain" >> "$LOG" 2>&1 &
 copilot_pid=$!
 
