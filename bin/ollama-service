@@ -1,0 +1,41 @@
+#!/bin/bash
+# Manage the custom Ollama launchd service (com.jonmagic.ollama)
+# Uses a wrapper script to set DYLD_LIBRARY_PATH for MLX image generation support.
+
+LABEL="com.jonmagic.ollama"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+
+case "${1:-status}" in
+  start)
+    launchctl load "$PLIST" 2>/dev/null
+    launchctl start "$LABEL" 2>/dev/null
+    echo "Ollama started"
+    ;;
+  stop)
+    launchctl stop "$LABEL" 2>/dev/null
+    launchctl unload "$PLIST" 2>/dev/null
+    echo "Ollama stopped"
+    ;;
+  restart)
+    launchctl stop "$LABEL" 2>/dev/null
+    launchctl unload "$PLIST" 2>/dev/null
+    sleep 1
+    launchctl load "$PLIST" 2>/dev/null
+    echo "Ollama restarted"
+    ;;
+  status)
+    if pgrep -qf "ollama serve"; then
+      PID=$(pgrep -f "ollama serve" | head -1)
+      echo "Ollama is running (PID $PID)"
+      ollama ps 2>/dev/null
+    else
+      echo "Ollama is not running"
+    fi
+    ;;
+  log)
+    tail -f /opt/homebrew/var/log/ollama.log
+    ;;
+  *)
+    echo "Usage: ollama-service {start|stop|restart|status|log}"
+    ;;
+esac
