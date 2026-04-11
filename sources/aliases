@@ -99,6 +99,9 @@ if executable_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"; then
   alias copilot='~/.asdf/installs/nodejs/25.2.1/bin/copilot'
 fi
 
+# startpage
+alias sp="cd ~/code/jonmagic/startpage && copilot"
+
 # ruby
 if command_exists "$HOME/.asdf/shims/ruby"; then
   alias ruby='~/.asdf/shims/ruby'
