@@ -27,43 +27,10 @@ fi
 
 # Tailscale
 if [[ -x "$HOME/.dotfiles/bin/tailscale" ]]; then
+  unalias ts-accounts ts-work ts-personal ts-login-work ts-login-personal 2>/dev/null
+  unfunction _tailscale_profile_exists tsw tsp 2>/dev/null
   alias tailscale="$HOME/.dotfiles/bin/tailscale"
-  alias ts-accounts='tailscale switch --list'
-  alias ts-work='tailscale switch work'
-  alias ts-personal='tailscale switch personal'
-  alias ts-login-work='tailscale login --nickname=work'
-  alias ts-login-personal='tailscale login --nickname=personal'
-
-  _tailscale_profile_exists() {
-    tailscale switch --list 2>/dev/null | awk -v target="$1" '
-      NR > 1 {
-        account = $3
-        sub(/\*$/, "", account)
-        if (account == target) {
-          found = 1
-        }
-      }
-      END {
-        exit !found
-      }
-    '
-  }
-
-  tsw() {
-    if _tailscale_profile_exists work; then
-      tailscale switch work
-    else
-      tailscale login --nickname=work
-    fi
-  }
-
-  tsp() {
-    if _tailscale_profile_exists personal; then
-      tailscale switch personal
-    else
-      tailscale login --nickname=personal
-    fi
-  }
+  # Keep only the wrapper; profile-switch helpers were unstable on macOS here.
 fi
 
 # Archive meeting
