@@ -1,0 +1,7 @@
+# Lightweight shell config for remote SSH sessions.
+# Skips local-only tools (gh auth, Ghostty, mise, spaceship prompt, brew).
+# Sourced from entrypoint when SSH_CONNECTION is set.
+
+safe_source "$HOME/.dotfiles/sources/path"
+safe_source "$HOME/.dotfiles/sources/aliases"
+safe_source "$HOME/.dotfiles/sources/functions.zsh"
