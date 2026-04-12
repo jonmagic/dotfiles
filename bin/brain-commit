@@ -22,6 +22,7 @@ cleanup_copilot_run_artifacts() {
     return
   fi
 
+  # Remove session state directories created by this run
   find "$HOME/.copilot/session-state" -maxdepth 1 -mindepth 1 -type d -newer "$RUN_SENTINEL" -print0 2>/dev/null | \
     while IFS= read -r -d '' session_dir; do
       workspace_file="$session_dir/workspace.yaml"
@@ -32,6 +33,22 @@ cleanup_copilot_run_artifacts() {
         echo "$(date): removed copilot session state $session_dir" >> "$LOG"
       fi
     done
+
+  # Remove "commit brain" sessions from session-store.db so they don't
+  # clutter copilot-sessions search results
+  local session_db="$HOME/.copilot/session-store.db"
+  if [ -f "$session_db" ]; then
+    sqlite3 "$session_db" "
+      DELETE FROM search_index WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
+      DELETE FROM session_refs WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
+      DELETE FROM session_files WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
+      DELETE FROM checkpoints WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
+      DELETE FROM turns WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
+      DELETE FROM sessions WHERE summary = 'commit brain';
+    " 2>/dev/null && \
+      echo "$(date): cleaned commit brain sessions from session-store.db" >> "$LOG" || \
+      echo "$(date): failed to clean session-store.db" >> "$LOG"
+  fi
 }
 
 # Prevent overlapping runs

@@ -171,3 +171,16 @@ Here is the output from my software update script. Please:
 Output:
 $(cat "$LOG")
 " --allow-tool shell --disable-builtin-mcps --no-ask-user --model claude-sonnet-4.5
+
+# Clean up ephemeral sessions from session-store.db
+SESSION_DB="$HOME/.copilot/session-store.db"
+if [[ -f "$SESSION_DB" ]]; then
+  sqlite3 "$SESSION_DB" "
+    DELETE FROM search_index WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
+    DELETE FROM session_refs WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
+    DELETE FROM session_files WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
+    DELETE FROM checkpoints WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
+    DELETE FROM turns WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
+    DELETE FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output';
+  " 2>/dev/null
+fi
