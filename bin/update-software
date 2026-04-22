@@ -79,14 +79,30 @@ trap "rm -f $LOG" EXIT
     local mas_bin=""
     local outdated_apps=""
     local outdated_status=0
+    local skip_mas="${UPDATE_SOFTWARE_SKIP_MAS:-}"
+    local skip_app_ids_raw="${UPDATE_SOFTWARE_SKIP_MAS_APP_IDS:-}"
     local app_line=""
     local app_id=""
+    # Push Security is employer-installed and tied to a different Apple Account.
+    local -a skip_app_ids=("1596916655")
     local -a mas_cmd=()
     local -a outdated_app_lines=()
+    local -a updatable_app_lines=()
     local -a failed_apps=()
+    local -a skipped_apps=()
 
     mas_bin="$(command -v mas)"
     mas_cmd=(env MAS_NO_AUTO_INDEX=1 "$mas_bin")
+
+    if [[ -n "$skip_mas" && "$skip_mas" != "0" && "$skip_mas" != "false" ]]; then
+      echo "Mac App Store upgrades disabled by UPDATE_SOFTWARE_SKIP_MAS."
+      return 0
+    fi
+
+    skip_app_ids_raw="${skip_app_ids_raw//,/ }"
+    if [[ -n "${skip_app_ids_raw//[[:space:]]/}" ]]; then
+      skip_app_ids+=(${=skip_app_ids_raw})
+    fi
 
     outdated_apps="$("${mas_cmd[@]}" outdated 2>&1)"
     outdated_status=$?
@@ -110,12 +126,29 @@ trap "rm -f $LOG" EXIT
       return 0
     fi
 
+    for app_line in "${outdated_app_lines[@]}"; do
+      app_id="${app_line%% *}"
+
+      if (( ${skip_app_ids[(Ie)$app_id]} != 0 )); then
+        skipped_apps+=("$app_line")
+      else
+        updatable_app_lines+=("$app_line")
+      fi
+    done
+
+    if (( ${#updatable_app_lines[@]} == 0 )); then
+      echo ""
+      echo "Skipped Mac App Store updates:"
+      printf ' - %s\n' "${skipped_apps[@]}"
+      return 0
+    fi
+
     if ! sudo -v; then
       echo "Unable to authenticate sudo; skipping Mac App Store upgrades."
       return 1
     fi
 
-    for app_line in "${outdated_app_lines[@]}"; do
+    for app_line in "${updatable_app_lines[@]}"; do
       app_id="${app_line%% *}"
 
       echo ""
@@ -130,6 +163,12 @@ trap "rm -f $LOG" EXIT
         fi
       fi
     done
+
+    if (( ${#skipped_apps[@]} != 0 )); then
+      echo ""
+      echo "Skipped Mac App Store updates:"
+      printf ' - %s\n' "${skipped_apps[@]}"
+    fi
 
     if (( ${#failed_apps[@]} != 0 )); then
       echo ""

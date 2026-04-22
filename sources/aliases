@@ -6,10 +6,6 @@ executable_exists() {
   [[ -x "$1" ]]
 }
 
-if command_exists bundle; then
-  alias bx="bundle exec"
-fi
-
 # Visual Studio Code
 if command_exists code; then
   alias e=code
@@ -18,19 +14,6 @@ fi
 # Visual Studio Code Insiders
 if command_exists code-insiders; then
   alias ee=code-insiders
-fi
-
-# LLM visual mode
-if command_exists llm; then
-  alias llm-vision=llm -m s52
-fi
-
-# Tailscale
-if [[ -x "$HOME/.dotfiles/bin/tailscale" ]]; then
-  unalias ts-accounts ts-work ts-personal ts-login-work ts-login-personal 2>/dev/null
-  unfunction _tailscale_profile_exists tsw tsp 2>/dev/null
-  alias tailscale="$HOME/.dotfiles/bin/tailscale"
-  # Keep only the wrapper; profile-switch helpers were unstable on macOS here.
 fi
 
 # Archive meeting
@@ -54,16 +37,6 @@ $(git diff --cached)" | sed '/^```/d')
   }
 fi
 
-# Fetch GitHub conversation
-if executable_exists "$HOME/code/jonmagic/scripts/bin/fetch-github-conversation"; then
-  alias fgc='~/code/jonmagic/scripts/bin/fetch-github-conversation'
-fi
-
-# Summarize GitHub conversation
-if command_exists llm; then
-  alias es='llm -f ~/code/jonmagic/prompts/summarize/github-conversation-executive-summary.md'
-fi
-
 # Prepare Pull Request
 if executable_exists "$HOME/code/jonmagic/scripts/bin/prepare-pull-request"; then
   alias ppr='~/code/jonmagic/scripts/bin/prepare-pull-request --base-branch main --pr-body-prompt-path ~/code/jonmagic/prompts/generate/pull-request-body.md'
@@ -74,37 +47,9 @@ if command_exists git && command_exists llm; then
   alias gbb='git for-each-ref --sort=-committerdate --format="%(refname:short) - %(committerdate:short) - %(authorname) - %(subject)" refs/heads/ | llm "sort newest to oldest and format as a markdown table"'
 fi
 
-# Fix Codespace port visibility
-if command_exists gh; then
-  alias fixcs='gh codespace ports visibility 3000:public -c $(gh codespace list --limit 1 --json name -q ".[0].name")'
-fi
-
-# lazygit
-if command_exists lazygit; then
-  alias lg='lazygit'
-fi
-
-# Start litellm proxy to copilot models
-if executable_exists "$HOME/code/jonmagic/litellm-copilot/litellm-copilot"; then
-  alias proxy='~/code/jonmagic/litellm-copilot/litellm-copilot --nightly --port 4000'
-fi
-
-# happy claude code client
-if executable_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/happy"; then
-  alias happy='~/.asdf/installs/nodejs/25.2.1/bin/happy'
-fi
-
 # copilot cli
 if executable_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"; then
   alias copilot='~/.asdf/installs/nodejs/25.2.1/bin/copilot'
-fi
-
-# startpage
-alias sp="cd ~/code/jonmagic/startpage && copilot"
-
-# ruby
-if command_exists "$HOME/.asdf/shims/ruby"; then
-  alias ruby='~/.asdf/shims/ruby'
 fi
 
 # llm

@@ -72,4 +72,11 @@ else
   autoload -Uz compinit
   compinit
   # End of Docker CLI completions
+
+  if [[ -o interactive ]] && [[ -t 1 ]] && [[ -z "${DOTFILES_HELP_DISABLE:-}" ]] && [[ -z "${DOTFILES_HELP_SHOWN:-}" ]]; then
+    export DOTFILES_HELP_SHOWN=1
+    if [[ -x "$HOME/.dotfiles/bin/help" ]]; then
+      "$HOME/.dotfiles/bin/help" --startup
+    fi
+  fi
 fi

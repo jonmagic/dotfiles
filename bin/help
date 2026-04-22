@@ -1,0 +1,337 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ALIASES_FILE="$ROOT_DIR/sources/aliases"
+FUNCTIONS_FILE="$ROOT_DIR/sources/functions.zsh"
+BIN_DIR="$ROOT_DIR/bin"
+
+PLAIN_OUTPUT=0
+STARTUP_MODE=0
+QUERY=""
+
+usage() {
+  cat <<'EOF'
+Usage: help [aliases|functions|scripts|command-name] [--plain]
+
+Without arguments, prints the custom dotfiles command guide.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --plain)
+      PLAIN_OUTPUT=1
+      ;;
+    --startup)
+      STARTUP_MODE=1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [[ -n "$QUERY" ]]; then
+        usage >&2
+        exit 1
+      fi
+      QUERY="$1"
+      ;;
+  esac
+  shift
+done
+
+if [[ $PLAIN_OUTPUT -eq 0 && -t 1 && -z "${NO_COLOR:-}" ]]; then
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  BLUE=$'\033[34m'
+  CYAN=$'\033[36m'
+  YELLOW=$'\033[33m'
+  RESET=$'\033[0m'
+else
+  BOLD=""
+  DIM=""
+  BLUE=""
+  CYAN=""
+  YELLOW=""
+  RESET=""
+fi
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+RECORDS_FILE="$TMP_DIR/records.tsv"
+QUERY_LOWER="$(printf '%s' "$QUERY" | tr '[:upper:]' '[:lower:]')"
+
+humanize_name() {
+  local value="${1//[-_.]/ }"
+  awk '{
+    for (i = 1; i <= NF; i++) {
+      $i = toupper(substr($i, 1, 1)) substr($i, 2)
+    }
+    print
+  }' <<<"$value"
+}
+
+script_override_description() {
+  case "$1" in
+    brain-commit) printf '%s\n' "Run the Brain auto-commit workflow" ;;
+    fixcs) printf '%s\n' "Repair GitHub Codespaces port forwarding" ;;
+    help) printf '%s\n' "Show the dotfiles command guide" ;;
+    ocw) printf '%s\n' "Share OpenCode over Tailscale for work" ;;
+    okta) printf '%s\n' "Print the Okta device trust secret" ;;
+    ollama-service) printf '%s\n' "Manage the custom Ollama launchd service" ;;
+    path) printf '%s\n' "Print PATH entries one per line" ;;
+    repo) printf '%s\n' "Open the current repo origin in a browser" ;;
+    tailscale) printf '%s\n' "Wrapper for the Tailscale CLI" ;;
+    ts-stop) printf '%s\n' "Stop and close Tailscale" ;;
+    tsp) printf '%s\n' "Start the personal Tailscale profile" ;;
+    tsw) printf '%s\n' "Start the work Tailscale profile" ;;
+    update-software) printf '%s\n' "Update software and hand the results to Copilot" ;;
+    *) return 1 ;;
+  esac
+}
+
+script_description() {
+  local file="$1"
+  local base
+  local description=""
+
+  base="$(basename "$file")"
+
+  if description="$(script_override_description "$base" 2>/dev/null)"; then
+    printf '%s\n' "$description"
+    return 0
+  fi
+
+  description="$(awk '
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+
+    NR == 1 && /^#!/ { next }
+
+    /^[[:space:]]*#/ {
+      line = $0
+      sub(/^[[:space:]]*#[[:space:]]?/, "", line)
+      line = trim(line)
+
+      if (line == "" || line ~ /^!/ || line ~ /^@raycast\./ || line ~ /^Required parameters:/ || line ~ /^Optional parameters:/ || line ~ /^Usage:/) {
+        next
+      }
+
+      print line
+      exit
+    }
+
+    /^[[:space:]]*$/ { next }
+    { exit }
+  ' "$file")"
+
+  if [[ -n "$description" ]]; then
+    printf '%s\n' "$description"
+  else
+    humanize_name "$base"
+  fi
+}
+
+collect_shell_records() {
+  awk -v root="$ROOT_DIR" '
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+
+    function clean_value(value) {
+      value = trim(value)
+      if ((value ~ /^".*"$/) || (value ~ /^'\''.*'\''$/)) {
+        value = substr(value, 2, length(value) - 2)
+      }
+      return value
+    }
+
+    function titleize(value,    pieces, count, i, word, result) {
+      gsub(/[-_.]/, " ", value)
+      count = split(value, pieces, /[[:space:]]+/)
+      result = ""
+      for (i = 1; i <= count; i++) {
+        word = pieces[i]
+        if (word == "") {
+          continue
+        }
+        word = toupper(substr(word, 1, 1)) substr(word, 2)
+        result = result (result ? " " : "") word
+      }
+      return result
+    }
+
+    BEGIN {
+      comment = ""
+    }
+
+    FNR == 1 {
+      comment = ""
+    }
+
+    /^[[:space:]]*#/ {
+      text = $0
+      sub(/^[[:space:]]*#[[:space:]]?/, "", text)
+      text = trim(text)
+      if (text != "" && text !~ /^(if[[:space:]]|fi$|then$|else$|elif[[:space:]]|alias[[:space:]]|function[[:space:]]|local[[:space:]]|case[[:space:]]|esac$|for[[:space:]]|while[[:space:]]|do$)/) {
+        comment = text
+      }
+      next
+    }
+
+    /^[[:space:]]*$/ {
+      comment = ""
+      next
+    }
+
+    {
+      file = FILENAME
+      sub("^" root "/?", "", file)
+    }
+
+    /^[[:space:]]*alias[[:space:]]+[A-Za-z0-9_.-]+=/ {
+      name = $0
+      sub(/^[[:space:]]*alias[[:space:]]+/, "", name)
+      sub(/=.*/, "", name)
+      value = $0
+      sub(/^[[:space:]]*alias[[:space:]]+[A-Za-z0-9_.-]+=/, "", value)
+      value = clean_value(value)
+      description = comment ? comment : value
+      print "alias\t" name "\t" description "\t" value "\t" file
+      next
+    }
+
+    /^[[:space:]]*(function[[:space:]]+)?[A-Za-z0-9_.-]+[[:space:]]*\(\)[[:space:]]*\{/ {
+      name = $0
+      sub(/^[[:space:]]*function[[:space:]]+/, "", name)
+      sub(/[[:space:]]*\(\)[[:space:]]*\{.*/, "", name)
+      name = trim(name)
+      if (name == "command_exists" || name == "executable_exists" || name ~ /^_/) {
+        next
+      }
+      description = comment ? comment : titleize(name)
+      print "function\t" name "\t" description "\t(shell function)\t" file
+      next
+    }
+  ' "$ALIASES_FILE" "$FUNCTIONS_FILE" >>"$RECORDS_FILE"
+}
+
+collect_script_records() {
+  while IFS= read -r file; do
+    local name="${file##*/}"
+    local description
+    description="$(script_description "$file")"
+    printf 'script\t%s\t%s\t%s\t%s\n' \
+      "$name" \
+      "$description" \
+      "$ROOT_DIR/bin/$name" \
+      "${file#$ROOT_DIR/}" >>"$RECORDS_FILE"
+  done < <(find "$BIN_DIR" -maxdepth 1 -type f -perm -u+x ! -name '.*' | sort)
+}
+
+print_header() {
+  local alias_count function_count script_count
+
+  alias_count="$(awk -F '\t' '$1 == "alias" { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+  function_count="$(awk -F '\t' '$1 == "function" { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+  script_count="$(awk -F '\t' '$1 == "script" { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+
+  printf '%s%sDotfiles command guide%s\n' "$BLUE" "$BOLD" "$RESET"
+  printf '%s  aliases:%s %s  %sfunctions:%s %s  %sscripts:%s %s\n' \
+    "$DIM" "$RESET" "$alias_count" \
+    "$DIM" "$RESET" "$function_count" \
+    "$DIM" "$RESET" "$script_count"
+  printf '%s  help aliases | help functions | help scripts | help <name>%s\n' "$DIM" "$RESET"
+  printf '\n'
+}
+
+print_section() {
+  local kind="$1"
+  local title="$2"
+  local section_file="$TMP_DIR/${kind}.tsv"
+
+  awk -F '\t' -v kind="$kind" '$1 == kind { print $0 }' "$RECORDS_FILE" | sort -t $'\t' -k2,2 >"$section_file"
+
+  if [[ ! -s "$section_file" ]]; then
+    return 0
+  fi
+
+  printf '%s%s%s%s\n' "$CYAN" "$BOLD" "$title" "$RESET"
+
+  awk -F '\t' -v bold="$BOLD" -v reset="$RESET" '
+    {
+      rows[NR] = $0
+      if (length($2) > width) {
+        width = length($2)
+      }
+    }
+
+    END {
+      for (i = 1; i <= NR; i++) {
+        split(rows[i], parts, "\t")
+        printf "  %s%-*s%s  %s\n", bold, width, parts[2], reset, parts[3]
+      }
+    }
+  ' "$section_file"
+
+  printf '\n'
+}
+
+print_match() {
+  local section_file="$TMP_DIR/match.tsv"
+
+  awk -F '\t' -v query_lower="$QUERY_LOWER" '
+    tolower($2) == query_lower { print $0 }
+  ' "$RECORDS_FILE" >"$section_file"
+
+  if [[ ! -s "$section_file" ]]; then
+    printf '%sNo custom alias, function, or script named "%s".%s\n' "$YELLOW" "$QUERY" "$RESET" >&2
+    exit 1
+  fi
+
+  while IFS=$'\t' read -r kind name description value file; do
+    printf '%s%s%s%s\n' "$BLUE" "$BOLD" "$name" "$RESET"
+    printf '  %skind:%s %s\n' "$DIM" "$RESET" "$kind"
+    printf '  %ssource:%s %s\n' "$DIM" "$RESET" "$file"
+    printf '  %ssummary:%s %s\n' "$DIM" "$RESET" "$description"
+    if [[ "$kind" == "alias" ]]; then
+      printf '  %scommand:%s %s\n' "$DIM" "$RESET" "$value"
+    elif [[ "$kind" == "script" ]]; then
+      printf '  %scommand:%s %s\n' "$DIM" "$RESET" "$value"
+    fi
+    printf '\n'
+  done <"$section_file"
+}
+
+collect_shell_records
+collect_script_records
+
+case "$QUERY_LOWER" in
+  "" )
+    print_header
+    print_section "alias" "ALIASES"
+    print_section "function" "FUNCTIONS"
+    print_section "script" "SCRIPTS"
+    ;;
+  alias|aliases)
+    print_header
+    print_section "alias" "ALIASES"
+    ;;
+  function|functions)
+    print_header
+    print_section "function" "FUNCTIONS"
+    ;;
+  script|scripts)
+    print_header
+    print_section "script" "SCRIPTS"
+    ;;
+  *)
+    print_match
+    ;;
+esac
