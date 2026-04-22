@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/.tailscale-workflows.sh"
+source "$SCRIPT_DIR/tailscale-workflows"
 
 ts_require_tailscale
 ts_log "Stopping and closing Tailscale..."
