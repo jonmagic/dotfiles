@@ -1,5 +1,6 @@
 .DS_Store
 antigen.zsh
 *.lock.json
+*.zwc
 /webcam/.current_state
 /sources/env_secrets
