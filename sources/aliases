@@ -19,10 +19,14 @@ fi
 # Archive meeting
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
   am() {
+    local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-gpt-5.5}"
+    local archive_meeting_reasoning_effort="${ARCHIVE_MEETING_REASONING_EFFORT:-medium}"
     ~/code/jonmagic/scripts/bin/archive-meeting \
       --brain-dir ~/Brain \
       --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md \
       --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md \
+      --model "$archive_meeting_model" \
+      --reasoning-effort "$archive_meeting_reasoning_effort" \
       "$@"
   }
 fi
