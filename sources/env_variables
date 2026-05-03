@@ -8,4 +8,7 @@ if [[ $OSTYPE == darwin* ]]; then
   export GOBIN="$HOME/code/go/bin"                 # where `go install` puts binaries
 
   export ONECLI_API_HOST=http://localhost:10254
+
+  # Keep Ollama models loaded in memory (avoid cold starts)
+  export OLLAMA_KEEP_ALIVE="-1"
 fi
