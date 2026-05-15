@@ -60,7 +60,6 @@ brew "mysql@8.0", restart_service: :changed
 brew "ncurses"
 brew "nmap"
 brew "node-build"
-brew "nutcracker/tap/openssl@1.0"
 brew "ollama"
 brew "openblas"
 brew "openssl@3"
