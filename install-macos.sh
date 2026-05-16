@@ -32,6 +32,11 @@ echo "-> Installing homebrew packages"
 brew update
 brew bundle --file=~/.dotfiles/brew/Brewfile
 
+if [[ -x /opt/homebrew/bin/llm ]]; then
+  echo "-> Installing llm GitHub Copilot plugin"
+  /opt/homebrew/bin/llm install --upgrade llm-github-copilot
+fi
+
 if ! plutil -extract Window\ Settings.One\ Dark xml1 -o - ~/Library/Preferences/com.apple.Terminal.plist > /dev/null; then
   echo "-> Importing Terminal themes"
   ~/.dotfiles/themes/import.sh

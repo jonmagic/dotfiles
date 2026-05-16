@@ -1,16 +1,147 @@
 #!/usr/bin/env bash
-# Run the Homebrew LLM install; the asdf shim can win PATH without a Python version.
+# Run Simon Willison's LLM with GitHub Copilot as the default prompt backend.
 set -euo pipefail
 
-if [[ ! -x /opt/homebrew/bin/llm ]]; then
-  echo "Homebrew llm not found at /opt/homebrew/bin/llm" >&2
+LLM_BIN="${LLM_BIN:-/opt/homebrew/bin/llm}"
+DEFAULT_COPILOT_MODEL="${LLM_COPILOT_MODEL:-github_copilot/claude-opus-4.6}"
+
+if [[ ! -x "$LLM_BIN" ]]; then
+  echo "Homebrew llm not found at $LLM_BIN" >&2
   exit 127
 fi
 
-if [[ -z "${GITHUB_TOKEN:-}" && -z "${GITHUB_MODELS_KEY:-}" ]] && command -v gh >/dev/null 2>&1; then
-  if token="$(gh auth token 2>/dev/null)"; then
-    export GITHUB_TOKEN="$token"
+has_model_arg() {
+  local arg
+
+  for arg in "$@"; do
+    case "$arg" in
+      -m|--model|--model=*)
+        return 0
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+prompt_invocation() {
+  local arg first=""
+  local skip_next=0
+
+  [[ $# -gt 0 ]] || return 1
+
+  for arg in "$@"; do
+    case "$arg" in
+      -h|--help|--version)
+        return 1
+        ;;
+    esac
+  done
+
+  for arg in "$@"; do
+    if (( skip_next )); then
+      skip_next=0
+      continue
+    fi
+
+    case "$arg" in
+      --)
+        return 0
+        ;;
+      -m|--model|-s|--system|-d|--database|-q|--query|-a|--attachment|-T|--tool|--functions|--cl|--chain-limit|-o|--option|--schema|--schema-multi|-f|--fragment|--sf|--system-fragment|-t|--template|-p|--param|--key|--save|--cid|--conversation|--at|--attachment-type)
+        skip_next=1
+        ;;
+      -*)
+        ;;
+      *)
+        first="$arg"
+        break
+        ;;
+    esac
+  done
+
+  [[ -n "$first" ]] || return 1
+
+  case "$first" in
+    prompt)
+      return 0
+      ;;
+    aliases|chat|collections|embed|embed-models|embed-multi|fragments|github_copilot|install|keys|logs|models|openai|plugins|schemas|similar|templates|tools|uninstall)
+      return 1
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+}
+
+install_copilot_plugin() {
+  "$LLM_BIN" install --upgrade llm-github-copilot
+}
+
+copilot_plugin_installed() {
+  "$LLM_BIN" plugins 2>/dev/null | grep -Fq '"name": "llm-github-copilot"'
+}
+
+copilot_authenticated() {
+  local status
+
+  status="$("$LLM_BIN" github_copilot auth status 2>/dev/null)" || return 1
+  [[ "$status" != *"Not authenticated"* && "$status" == *"Authenticated"* ]]
+}
+
+setup_copilot() {
+  install_copilot_plugin
+  "$LLM_BIN" github_copilot auth login
+
+  if ! copilot_authenticated; then
+    echo "GitHub Copilot authentication did not complete." >&2
+    echo "Run 'llm setup-copilot' again and finish the device login before it times out." >&2
+    return 1
   fi
+
+  if "$LLM_BIN" models default "$DEFAULT_COPILOT_MODEL"; then
+    echo "llm default model set to $DEFAULT_COPILOT_MODEL"
+  else
+    echo "Authenticated, but $DEFAULT_COPILOT_MODEL was not available from the Copilot model list." >&2
+    echo "Run 'llm models list | grep github_copilot' and set LLM_COPILOT_MODEL to the model you want." >&2
+    return 1
+  fi
+}
+
+ensure_copilot_ready() {
+  if ! copilot_plugin_installed; then
+    echo "llm-github-copilot is not installed." >&2
+    echo "Run 'llm setup-copilot' to install and authenticate the plugin." >&2
+    exit 1
+  fi
+
+  if ! copilot_authenticated; then
+    "$LLM_BIN" github_copilot auth status >&2 || true
+    echo "Run 'llm setup-copilot' to authenticate GitHub Copilot for llm." >&2
+    exit 1
+  fi
+}
+
+if [[ "${1:-}" == "setup-copilot" ]]; then
+  shift
+  if [[ $# -gt 0 ]]; then
+    echo "Usage: llm setup-copilot" >&2
+    exit 2
+  fi
+  setup_copilot
+  exit $?
 fi
 
-exec /opt/homebrew/bin/llm "$@"
+if prompt_invocation "$@" && ! has_model_arg "$@"; then
+  ensure_copilot_ready
+
+  if [[ "${1:-}" == "prompt" ]]; then
+    shift
+    exec "$LLM_BIN" prompt -m "$DEFAULT_COPILOT_MODEL" "$@"
+  fi
+
+  exec "$LLM_BIN" -m "$DEFAULT_COPILOT_MODEL" "$@"
+fi
+
+exec "$LLM_BIN" "$@"

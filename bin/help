@@ -12,9 +12,9 @@ QUERY=""
 
 usage() {
   cat <<'EOF'
-Usage: help [aliases|functions|scripts|command-name] [--plain]
+Usage: help [all|aliases|functions|scripts|ollama|command-name] [--plain]
 
-Without arguments, prints the custom dotfiles command guide.
+Without arguments, prints the workflow-focused dotfiles command guide.
 EOF
 }
 
@@ -77,8 +77,9 @@ script_override_description() {
     brain-commit) printf '%s\n' "Run the Brain auto-commit workflow" ;;
     fixcs) printf '%s\n' "Repair GitHub Codespaces port forwarding" ;;
     help) printf '%s\n' "Show the dotfiles command guide" ;;
+    llm) printf '%s\n' "Run a single-shot GitHub Copilot prompt through llm" ;;
     ocw) printf '%s\n' "Share OpenCode over Tailscale for work" ;;
-    ollama-service) printf '%s\n' "Manage the custom Ollama launchd service" ;;
+    ollama-service) printf '%s\n' "Manage the on-demand Ollama launchd service" ;;
     path) printf '%s\n' "Print PATH entries one per line" ;;
     repo) printf '%s\n' "Open the current repo origin in a browser" ;;
     tailscale) printf '%s\n' "Wrapper for the Tailscale CLI" ;;
@@ -238,18 +239,8 @@ collect_script_records() {
 }
 
 print_header() {
-  local alias_count function_count script_count
-
-  alias_count="$(awk -F '\t' '$1 == "alias" { count++ } END { print count + 0 }' "$RECORDS_FILE")"
-  function_count="$(awk -F '\t' '$1 == "function" { count++ } END { print count + 0 }' "$RECORDS_FILE")"
-  script_count="$(awk -F '\t' '$1 == "script" { count++ } END { print count + 0 }' "$RECORDS_FILE")"
-
   printf '%s%sDotfiles command guide%s\n' "$BLUE" "$BOLD" "$RESET"
-  printf '%s  aliases:%s %s  %sfunctions:%s %s  %sscripts:%s %s\n' \
-    "$DIM" "$RESET" "$alias_count" \
-    "$DIM" "$RESET" "$function_count" \
-    "$DIM" "$RESET" "$script_count"
-  printf '%s  help aliases | help functions | help scripts | help <name>%s\n' "$DIM" "$RESET"
+  printf '%s  help all | help <name> | help ollama%s\n' "$DIM" "$RESET"
   printf '\n'
 }
 
@@ -285,6 +276,87 @@ print_section() {
   printf '\n'
 }
 
+append_named_record() {
+  local name="$1"
+  local section_file="$2"
+
+  if [[ "$name" == "ollama" ]]; then
+    printf 'topic\tollama\tLoad local Ollama service instructions when needed\thelp ollama\thelp\n' >>"$section_file"
+    return 0
+  fi
+
+  awk -F '\t' -v name="$name" '
+    tolower($2) == tolower(name) {
+      print $0
+      exit
+    }
+  ' "$RECORDS_FILE" >>"$section_file"
+}
+
+print_workflow_section() {
+  local title="$1"
+  local section_file
+  shift
+
+  section_file="$(mktemp "$TMP_DIR/workflow.XXXXXX")"
+
+  local name
+  for name in "$@"; do
+    append_named_record "$name" "$section_file"
+  done
+
+  if [[ ! -s "$section_file" ]]; then
+    return 0
+  fi
+
+  printf '%s%s%s%s\n' "$CYAN" "$BOLD" "$title" "$RESET"
+
+  awk -F '\t' -v bold="$BOLD" -v reset="$RESET" '
+    {
+      rows[NR] = $0
+      if (length($2) > width) {
+        width = length($2)
+      }
+    }
+
+    END {
+      for (i = 1; i <= NR; i++) {
+        split(rows[i], parts, "\t")
+        printf "  %s%-*s%s  %s\n", bold, width, parts[2], reset, parts[3]
+      }
+    }
+  ' "$section_file"
+
+  printf '\n'
+}
+
+print_workflows() {
+  print_header
+  print_workflow_section "AI and editing" c copilot llm ee
+  print_workflow_section "Repo work" flow repo commit
+  print_workflow_section "Meetings and brain" am
+  print_workflow_section "Remote machines" wasp
+  print_workflow_section "On-demand instructions" ollama
+  printf '%s  Use help all for the full source inventory, including under-the-hood helpers.%s\n' "$DIM" "$RESET"
+}
+
+print_all() {
+  print_header
+  print_section "alias" "ALIASES"
+  print_section "function" "FUNCTIONS"
+  print_section "script" "SCRIPTS"
+}
+
+print_ollama_help() {
+  printf '%s%sOllama%s\n' "$BLUE" "$BOLD" "$RESET"
+  printf '  %swhen:%s On-demand local model service, not a regular daily command.\n' "$DIM" "$RESET"
+  printf '  %sstatus:%s ollama-service status\n' "$DIM" "$RESET"
+  printf '  %sstart:%s  ollama-service start\n' "$DIM" "$RESET"
+  printf '  %sstop:%s   ollama-service stop\n' "$DIM" "$RESET"
+  printf '  %slogs:%s   ollama-service log\n' "$DIM" "$RESET"
+  printf '\n'
+}
+
 print_match() {
   local section_file="$TMP_DIR/match.tsv"
 
@@ -316,10 +388,16 @@ collect_script_records
 
 case "$QUERY_LOWER" in
   "" )
-    print_header
-    print_section "alias" "ALIASES"
-    print_section "function" "FUNCTIONS"
-    print_section "script" "SCRIPTS"
+    print_workflows
+    ;;
+  all )
+    print_all
+    ;;
+  workflow|workflows)
+    print_workflows
+    ;;
+  ollama )
+    print_ollama_help
     ;;
   alias|aliases)
     print_header

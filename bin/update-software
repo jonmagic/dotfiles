@@ -179,14 +179,21 @@ trap "rm -f $LOG" EXIT
     fi
   }
 
-  # 7. Mac App Store
+  # 7. llm plugins
+  if [[ -x /opt/homebrew/bin/llm ]]; then
+    run_step "Upgrading llm GitHub Copilot plugin" /opt/homebrew/bin/llm install --upgrade llm-github-copilot
+  else
+    skip_step "Upgrading llm GitHub Copilot plugin" "llm not installed"
+  fi
+
+  # 8. Mac App Store
   if command -v mas &>/dev/null; then
     run_step "Upgrading Mac App Store apps" upgrade_mas_apps
   else
     skip_step "Upgrading Mac App Store apps" "mas CLI not installed"
   fi
 
-  # 8. Copilot CLI
+  # 9. Copilot CLI
   if command -v gh &>/dev/null; then
     run_step "Upgrading Copilot CLI" gh copilot -- update
   else

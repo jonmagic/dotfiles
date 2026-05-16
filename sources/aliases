@@ -6,10 +6,9 @@ executable_exists() {
   [[ -x "$1" ]]
 }
 
-# Visual Studio Code
-if command_exists code; then
-  alias e=code
-fi
+_command_path() {
+  whence -p "$1" 2>/dev/null || command -v "$1" 2>/dev/null
+}
 
 # Visual Studio Code Insiders
 if command_exists code-insiders; then
@@ -19,25 +18,71 @@ fi
 # Archive meeting
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
   am() {
-    local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-gpt-5.5}"
-    local archive_meeting_reasoning_effort="${ARCHIVE_MEETING_REASONING_EFFORT:-medium}"
+    local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-github_copilot/claude-opus-4.6}"
     ~/code/jonmagic/scripts/bin/archive-meeting \
       --brain-dir ~/Brain \
       --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md \
       --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md \
       --model "$archive_meeting_model" \
-      --reasoning-effort "$archive_meeting_reasoning_effort" \
       "$@"
   }
 fi
 
-# Create semantic commit
-if command_exists copilot; then
+# Create semantic commit from staged changes
+if command_exists git && command_exists llm; then
   commit() {
-    local msg=$(copilot -p "$(cat ~/code/jonmagic/prompts/generate/commit-message.md)
+    local prompt_file="$HOME/code/jonmagic/prompts/generate/commit-message.md"
+    local model="${COMMIT_LLM_MODEL:-${LLM_COPILOT_MODEL:-github_copilot/claude-opus-4.6}}"
+    local max_diff_bytes="${COMMIT_LLM_MAX_DIFF_BYTES:-200000}"
+    local diff diff_bytes raw_msg msg line_count
 
-$(git diff --cached)" | sed '/^```/d')
-    git commit -m "$msg"
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      echo "Not inside a git repository." >&2
+      return 1
+    fi
+
+    if [[ ! -f "$prompt_file" ]]; then
+      echo "Commit prompt not found at $prompt_file" >&2
+      return 1
+    fi
+
+    diff="$(git diff --cached)"
+    if [[ -z "$diff" ]]; then
+      echo "No staged changes to commit." >&2
+      return 1
+    fi
+
+    diff_bytes="$(printf '%s' "$diff" | wc -c | tr -d '[:space:]')"
+    if (( diff_bytes > max_diff_bytes )); then
+      echo "Staged diff is ${diff_bytes} bytes, over COMMIT_LLM_MAX_DIFF_BYTES=${max_diff_bytes}." >&2
+      echo "Commit manually or raise COMMIT_LLM_MAX_DIFF_BYTES for this run." >&2
+      return 1
+    fi
+
+    raw_msg="$({ cat "$prompt_file"; printf '\n\n%s\n' "$diff"; } | llm --no-log --no-stream -m "$model")" || return
+    msg="$(printf '%s\n' "$raw_msg" |
+      sed '/^```/d' |
+      sed -E "1s/^(Commit message:|Here is( a)? commit message:|Here's( a)? commit message:)[[:space:]]*//I" |
+      awk 'NF { started = 1 } started { lines[++n] = $0 } END { while (n > 0 && lines[n] ~ /^[[:space:]]*$/) n--; for (i = 1; i <= n; i++) print lines[i] }')"
+
+    if [[ -z "$msg" ]]; then
+      echo "llm returned an empty commit message." >&2
+      return 1
+    fi
+
+    line_count="$(printf '%s\n' "$msg" | awk 'END { print NR }')"
+    if (( line_count > 20 )); then
+      echo "llm returned a ${line_count}-line commit message; refusing to commit." >&2
+      printf '%s\n' "$msg" >&2
+      return 1
+    fi
+
+    if [[ -n "${COMMIT_LLM_DRY_RUN:-}" ]]; then
+      printf '%s\n' "$msg"
+      return 0
+    fi
+
+    printf '%s\n' "$msg" | git commit -F -
   }
 fi
 
@@ -56,23 +101,10 @@ if command_exists git && command_exists llm; then
   alias gbb='git for-each-ref --sort=-committerdate --format="%(refname:short) - %(committerdate:short) - %(authorname) - %(subject)" refs/heads/ | llm "sort newest to oldest and format as a markdown table"'
 fi
 
-# copilot cli
-if executable_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"; then
-  alias copilot='~/.asdf/installs/nodejs/25.2.1/bin/copilot'
-fi
-
-# llm
-if command_exists "/opt/homebrew/bin/llm"; then
-  alias llm='/opt/homebrew/bin/llm'
-fi
-
-# opencode
-# if executable_exists "/opt/homebrew/bin/bun"; then
-#   alias ocnext='OPENCODE_MCP_TOOL_SEARCH=1 CONTEXT_MODE=1 ~/code/anomalyco/opencode/packages/opencode/dist/opencode-darwin-arm64/bin/opencode'
-#   alias opencode='~/code/anomalyco/opencode/packages/opencode/dist/opencode-darwin-arm64/bin/opencode'
-# fi
-if command_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"; then
-  alias opencode="$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"
+# GitHub Copilot CLI
+if copilot_path="$(_command_path copilot)"; then
+  alias copilot="$copilot_path"
+  unset copilot_path
 fi
 
 # Copilot CLI with all permissions
