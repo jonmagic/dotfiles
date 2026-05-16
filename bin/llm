@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Run the Homebrew LLM install; the asdf shim can win PATH without a Python version.
+set -euo pipefail
+
+if [[ ! -x /opt/homebrew/bin/llm ]]; then
+  echo "Homebrew llm not found at /opt/homebrew/bin/llm" >&2
+  exit 127
+fi
+
+if [[ -z "${GITHUB_TOKEN:-}" && -z "${GITHUB_MODELS_KEY:-}" ]] && command -v gh >/dev/null 2>&1; then
+  if token="$(gh auth token 2>/dev/null)"; then
+    export GITHUB_TOKEN="$token"
+  fi
+fi
+
+exec /opt/homebrew/bin/llm "$@"
