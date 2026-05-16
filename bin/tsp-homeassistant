@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export TS_ORB_BIN="${TS_ORB_BIN:-/opt/homebrew/bin/orb}"
+export TS_ORBCTL_BIN="${TS_ORBCTL_BIN:-/opt/homebrew/bin/orbctl}"
+source "$SCRIPT_DIR/tailscale-workflows"
+
+LOCAL_HOST="${TS_HOMEASSISTANT_LOCAL_HOST:-127.0.0.1}"
+LOCAL_PORT="${TS_HOMEASSISTANT_LOCAL_PORT:-8123}"
+REMOTE_HOST="${TS_HOMEASSISTANT_REMOTE_HOST:-100.84.218.68}"
+REMOTE_PORT="${TS_HOMEASSISTANT_REMOTE_PORT:-8123}"
+
+ts_start_personal
+
+exec ssh \
+  -N \
+  -o ExitOnForwardFailure=yes \
+  -o ServerAliveInterval=60 \
+  -o ServerAliveCountMax=3 \
+  -L "${LOCAL_HOST}:${LOCAL_PORT}:${REMOTE_HOST}:${REMOTE_PORT}" \
+  "$TS_PERSONAL_MACHINE@orb"
