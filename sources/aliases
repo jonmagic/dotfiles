@@ -46,6 +46,11 @@ if executable_exists "$HOME/code/jonmagic/scripts/bin/prepare-pull-request"; the
   alias ppr='~/code/jonmagic/scripts/bin/prepare-pull-request --base-branch main --pr-body-prompt-path ~/code/jonmagic/prompts/generate/pull-request-body.md'
 fi
 
+# Flow
+if executable_exists "$HOME/code/jonmagic/flow/script/flow"; then
+  alias flow="$HOME/code/jonmagic/flow/script/flow"
+fi
+
 # Git branches by most recent commit date
 if command_exists git && command_exists llm; then
   alias gbb='git for-each-ref --sort=-committerdate --format="%(refname:short) - %(committerdate:short) - %(authorname) - %(subject)" refs/heads/ | llm "sort newest to oldest and format as a markdown table"'
@@ -73,4 +78,24 @@ fi
 # Copilot session finder
 if executable_exists "$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"; then
   alias cs="$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"
+fi
+
+# Tailscale personal SSH
+if command_exists tsp-ssh; then
+  alias wasp='tsp-ssh wasp'
+
+  _wasp_tmux() {
+    local session="$1"
+    if [[ ! "$session" =~ ^[1-9]$ ]]; then
+      echo "Usage: w<1-9>" >&2
+      return 2
+    fi
+
+    tsp-ssh wasp -t "zsh -lc 'tmux start-server; tmux set-environment -g DOTFILES_FULL_SSH 1; tmux set-environment -g DOTFILES_HELP_DISABLE 1; tmux set-environment -g COLORTERM truecolor; tmux set-option -g default-terminal tmux-256color; tmux has-session -t ${session} 2>/dev/null || tmux new-session -d -s ${session} \"env DOTFILES_FULL_SSH=1 DOTFILES_HELP_DISABLE=1 COLORTERM=truecolor zsh -l\"; tmux set-option -t ${session} status off; tmux attach-session -t ${session}'"
+  }
+
+  for session in {1..9}; do
+    alias "w${session}=_wasp_tmux ${session}"
+  done
+  unset session
 fi

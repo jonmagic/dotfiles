@@ -51,11 +51,7 @@ if [[ $OSTYPE = darwin* ]]; then
   fi
 fi
 
-if [[ -n "$SSH_CONNECTION" ]]; then
-  # Remote SSH session — lightweight config only
-  safe_source "$HOME/.dotfiles/sources/remote"
-else
-  # Local session — full config
+load_full_config() {
   safe_source "$HOME/.dotfiles/sources/path"
   safe_source "$HOME/.dotfiles/sources/aliases"
   safe_source "$HOME/.dotfiles/sources/functions.zsh"
@@ -79,4 +75,12 @@ else
       "$HOME/.dotfiles/bin/help" --startup
     fi
   fi
+}
+
+if [[ -n "$SSH_CONNECTION" && -z "${DOTFILES_FULL_SSH:-}" ]]; then
+  # Remote SSH session — lightweight config only unless explicitly opted in.
+  safe_source "$HOME/.dotfiles/sources/remote"
+else
+  # Local session, or an interactive remote session that wants the full prompt/theme.
+  load_full_config
 fi

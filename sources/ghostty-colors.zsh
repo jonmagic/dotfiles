@@ -304,10 +304,10 @@ _gtc_precmd() {
 }
 
 # ---------------------------------------------------------------------------
-# SSH coloring -- wraps ssh to tint before connect, restore after
+# SSH coloring -- wraps SSH commands to tint before connect, restore after
 # ---------------------------------------------------------------------------
 
-ssh() {
+_gtc_ssh_host_from_args() {
   local host="" skip=false arg
   for arg in "$@"; do
     if $skip; then skip=false; continue; fi
@@ -318,7 +318,11 @@ ssh() {
       *)   [[ -z "$host" ]] && host="$arg"; break ;;
     esac
   done
+  echo "$host"
+}
 
+_gtc_ssh_start() {
+  local host="$1"
   if [[ -n "$host" ]]; then
     local short="${host%%.*}"
     local appearance="$(_gtc_appearance)"
@@ -338,12 +342,30 @@ ssh() {
     fi
     _gtc_set_title "$_GTC_CURRENT_DOT $short"
   fi
+}
+
+_gtc_ssh_stop() {
+  _GTC_SSH_ACTIVE=""
+  _gtc_chpwd
+}
+
+ssh() {
+  _gtc_ssh_start "$(_gtc_ssh_host_from_args "$@")"
 
   command ssh "$@"
   local ret=$?
 
-  _GTC_SSH_ACTIVE=""
-  _gtc_chpwd
+  _gtc_ssh_stop
+  return $ret
+}
+
+tsp-ssh() {
+  _gtc_ssh_start "$(_gtc_ssh_host_from_args "$@")"
+
+  command tsp-ssh "$@"
+  local ret=$?
+
+  _gtc_ssh_stop
   return $ret
 }
 
