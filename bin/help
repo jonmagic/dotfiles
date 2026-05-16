@@ -82,8 +82,11 @@ script_override_description() {
     path) printf '%s\n' "Print PATH entries one per line" ;;
     repo) printf '%s\n' "Open the current repo origin in a browser" ;;
     tailscale) printf '%s\n' "Wrapper for the Tailscale CLI" ;;
-    ts-stop) printf '%s\n' "Stop and close Tailscale" ;;
-    tsp) printf '%s\n' "Start the personal Tailscale profile" ;;
+    ts-stop) printf '%s\n' "Stop work Tailscale or the personal OrbStack tailnet" ;;
+    tsp) printf '%s\n' "Start the personal OrbStack tailnet" ;;
+    tsp-copy-id) printf '%s\n' "Install a macOS SSH public key through the personal OrbStack tailnet" ;;
+    tsp-socks) printf '%s\n' "Start a SOCKS proxy through the personal OrbStack tailnet" ;;
+    tsp-ssh) printf '%s\n' "SSH through the personal OrbStack tailnet" ;;
     tsw) printf '%s\n' "Start the work Tailscale profile" ;;
     update-software) printf '%s\n' "Update software and hand the results to Copilot" ;;
     *) return 1 ;;

@@ -4,6 +4,27 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/tailscale-workflows"
 
-ts_require_tailscale
-ts_log "Stopping and closing Tailscale..."
-ts_stop_app || true
+profile="${1:-work}"
+
+case "$profile" in
+  work)
+    ts_require_tailscale
+    ts_log "Stopping and closing work Tailscale..."
+    ts_stop_app || true
+    ;;
+  personal)
+    ts_stop_personal
+    ;;
+  all)
+    ts_require_tailscale
+    ts_log "Stopping and closing work Tailscale..."
+    ts_stop_app || true
+    ts_stop_personal
+    ;;
+  -h|--help)
+    printf 'Usage: ts-stop [work|personal|all]\n'
+    ;;
+  *)
+    ts_die "Usage: ts-stop [work|personal|all]"
+    ;;
+esac

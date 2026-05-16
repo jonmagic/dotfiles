@@ -15,6 +15,22 @@ TAILSCALE_BIN="${TAILSCALE_BIN:-$HOME/.dotfiles/bin/tailscale}"
 TAILSCALE_APP_NAME="${TAILSCALE_APP_NAME:-Tailscale}"
 TS_CLI_READY_TIMEOUT="${TS_CLI_READY_TIMEOUT:-30}"
 TS_PROFILE_READY_TIMEOUT="${TS_PROFILE_READY_TIMEOUT:-45}"
+TS_ORB_BIN="${TS_ORB_BIN:-orb}"
+TS_ORBCTL_BIN="${TS_ORBCTL_BIN:-orbctl}"
+TS_PERSONAL_MACHINE="${TS_PERSONAL_MACHINE:-tailscale-personal}"
+TS_PERSONAL_OPERATOR="${TS_PERSONAL_OPERATOR:-${USER:-}}"
+TS_PERSONAL_READY_TIMEOUT="${TS_PERSONAL_READY_TIMEOUT:-45}"
+TS_PERSONAL_SOCKS_PORT="${TS_PERSONAL_SOCKS_PORT:-1080}"
+TS_PERSONAL_SSH_COPY_IDENTITY="${TS_PERSONAL_SSH_COPY_IDENTITY:-$HOME/.ssh/jonmagic_github.pub}"
+TS_PERSONAL_UP_TIMEOUT="${TS_PERSONAL_UP_TIMEOUT:-30s}"
+
+ts_require_command() {
+  local command_name="$1"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    ts_die "Expected $command_name on PATH"
+  fi
+}
 
 ts_require_tailscale() {
   if [[ ! -x "$TAILSCALE_BIN" ]]; then
@@ -232,6 +248,192 @@ ts_show_summary() {
 
   ts_log "Status:"
   "$TAILSCALE_BIN" status --peers=false 2>/dev/null | sed -n '1,5p' | sed 's/^/    /' || ts_warn "Unable to read Tailscale status."
+}
+
+ts_require_orbstack() {
+  ts_require_command "$TS_ORB_BIN"
+  ts_require_command "$TS_ORBCTL_BIN"
+
+  if ! "$TS_ORBCTL_BIN" info "$TS_PERSONAL_MACHINE" >/dev/null 2>&1; then
+    ts_die "Expected OrbStack machine '$TS_PERSONAL_MACHINE'. Create it with: orbctl create ubuntu $TS_PERSONAL_MACHINE"
+  fi
+}
+
+ts_personal_run() {
+  "$TS_ORB_BIN" -m "$TS_PERSONAL_MACHINE" "$@"
+}
+
+ts_start_personal_machine() {
+  "$TS_ORBCTL_BIN" start "$TS_PERSONAL_MACHINE" >/dev/null
+}
+
+ts_require_personal_tailscale() {
+  if ! ts_personal_run sh -lc 'command -v tailscale >/dev/null 2>&1'; then
+    ts_die "Expected Tailscale inside '$TS_PERSONAL_MACHINE'. Install it with: orb -m $TS_PERSONAL_MACHINE sh -lc 'curl -fsSL https://tailscale.com/install.sh | sh'"
+  fi
+}
+
+ts_start_personal_service() {
+  ts_personal_run sudo systemctl enable --now tailscaled >/dev/null
+}
+
+ts_personal_flags() {
+  printf '%s\n' --accept-routes=true --accept-dns=true --qr=false "--hostname=$TS_PERSONAL_MACHINE" "--timeout=$TS_PERSONAL_UP_TIMEOUT"
+
+  if [[ -n "$TS_PERSONAL_OPERATOR" ]]; then
+    printf '%s\n' "--operator=$TS_PERSONAL_OPERATOR"
+  fi
+}
+
+ts_up_personal() {
+  local -a flags=()
+  local output=""
+  local status=0
+
+  while IFS= read -r flag; do
+    flags+=("$flag")
+  done < <(ts_personal_flags)
+
+  ts_log "Bringing personal Tailscale up inside $TS_PERSONAL_MACHINE..."
+
+  set +e
+  output="$(ts_personal_run sudo tailscale up "${flags[@]}" "$@" 2>&1)"
+  status=$?
+  set -e
+
+  if [[ -n "$output" ]]; then
+    printf '%s\n' "$output"
+  fi
+
+  if (( status != 0 )); then
+    if [[ "$output" == *"login.tailscale.com/a/"* ]]; then
+      ts_die "Complete the Tailscale login above, then run tsp again."
+    fi
+
+    ts_die "tailscale up failed inside $TS_PERSONAL_MACHINE"
+  fi
+}
+
+ts_personal_status() {
+  ts_personal_run tailscale status --peers=false 2>/dev/null
+}
+
+ts_personal_logged_in() {
+  local status=""
+
+  status="$(ts_personal_status || true)"
+  [[ -n "$status" && "$status" != Logged\ out* ]]
+}
+
+ts_wait_for_personal_tailnet() {
+  local attempts="${1:-$TS_PERSONAL_READY_TIMEOUT}"
+  local i=0
+
+  while (( i < attempts )); do
+    if ts_personal_logged_in; then
+      return 0
+    fi
+
+    sleep 1
+    ((i += 1))
+  done
+
+  return 1
+}
+
+ts_show_personal_summary() {
+  ts_log "Personal tailnet status:"
+  ts_personal_status | sed -n '1,5p' | sed 's/^/    /' || ts_warn "Unable to read personal Tailscale status."
+
+  ts_log "SSH through personal tailnet with: tsp-ssh <host>"
+  ts_log "SOCKS proxy through personal tailnet with: tsp-socks [port]"
+}
+
+ts_start_personal() {
+  ts_require_orbstack
+
+  ts_log "Starting OrbStack machine $TS_PERSONAL_MACHINE..."
+  ts_start_personal_machine
+
+  ts_require_personal_tailscale
+
+  ts_log "Ensuring tailscaled is running inside $TS_PERSONAL_MACHINE..."
+  ts_start_personal_service
+
+  ts_up_personal "$@"
+
+  if ! ts_wait_for_personal_tailnet "$TS_PERSONAL_READY_TIMEOUT"; then
+    ts_show_personal_summary
+    ts_die "Personal tailnet is not logged in yet. Complete the Tailscale login above, then run tsp again."
+  fi
+
+  ts_show_personal_summary
+}
+
+ts_stop_personal() {
+  ts_require_orbstack
+
+  ts_log "Stopping personal Tailscale inside $TS_PERSONAL_MACHINE..."
+  ts_start_personal_machine
+  ts_personal_run sudo tailscale down >/dev/null 2>&1 || ts_warn "Unable to stop personal Tailscale."
+}
+
+ts_personal_ssh() {
+  local -a ssh_options=()
+
+  if [[ $# -eq 0 ]]; then
+    ts_die "Usage: tsp-ssh <ssh-args...>"
+  fi
+
+  ts_start_personal
+
+  ssh_options=(-o "ProxyCommand=$TS_ORB_BIN -m $TS_PERSONAL_MACHINE nc %h %p")
+  if [[ -n "${SSH_AUTH_SOCK:-}" ]]; then
+    ssh_options+=(-o "IdentityAgent=$SSH_AUTH_SOCK")
+  fi
+
+  exec ssh "${ssh_options[@]}" "$@"
+}
+
+ts_personal_socks() {
+  local port="${1:-$TS_PERSONAL_SOCKS_PORT}"
+
+  if [[ "$port" == "-h" || "$port" == "--help" ]]; then
+    printf 'Usage: tsp-socks [port]\n'
+    exit 0
+  fi
+
+  if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+    ts_die "Usage: tsp-socks [port]"
+  fi
+
+  ts_start_personal
+
+  ts_log "Starting SOCKS proxy on 127.0.0.1:$port through $TS_PERSONAL_MACHINE..."
+  exec ssh -N -D "127.0.0.1:$port" "$TS_PERSONAL_MACHINE@orb"
+}
+
+ts_personal_copy_id() {
+  local identity_file="$TS_PERSONAL_SSH_COPY_IDENTITY"
+  local -a ssh_options=()
+
+  if [[ $# -eq 0 ]]; then
+    ts_die "Usage: tsp-copy-id [ssh-copy-id-args...] <host>"
+  fi
+
+  ts_require_command ssh-copy-id
+  ts_start_personal
+  ssh_options=(-o "ProxyCommand=$TS_ORB_BIN -m $TS_PERSONAL_MACHINE nc %h %p")
+
+  if [[ -n "${SSH_AUTH_SOCK:-}" ]]; then
+    ssh_options+=(-o "IdentityAgent=$SSH_AUTH_SOCK")
+  fi
+
+  if [[ -f "$identity_file" ]]; then
+    exec ssh-copy-id -i "$identity_file" "${ssh_options[@]}" "$@"
+  fi
+
+  exec ssh-copy-id "${ssh_options[@]}" "$@"
 }
 
 ts_start_profile() {
