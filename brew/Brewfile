@@ -106,7 +106,7 @@ cask "slack"
 cask "spotify"
 cask "temurin"
 cask "viscosity"
-cask "visual-studio-code-insiders"
+cask "visual-studio-code@insiders"
 mas "1Password for Safari", id: 1569813296
 mas "Acorn", id: 6737921844
 mas "Calca", id: 635758264
