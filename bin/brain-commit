@@ -3,7 +3,7 @@ set -euo pipefail
 
 export MISE_GLOBAL_CONFIG_FILE="${MISE_GLOBAL_CONFIG_FILE:-$HOME/.config/mise/config.toml}"
 export MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES="${MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES:-none}"
-export PATH="$HOME/.local/share/mise/shims:$HOME/.asdf/installs/nodejs/25.2.1/bin:/opt/homebrew/bin:/usr/bin:/bin"
+export PATH="$HOME/.local/share/mise/shims:/opt/homebrew/bin:/usr/bin:/bin"
 export GIT_TERMINAL_PROMPT=0
 ssh-add --apple-use-keychain ~/.ssh/jonmagic_github 2>/dev/null || true
 COPILOT="$(command -v copilot || true)"
