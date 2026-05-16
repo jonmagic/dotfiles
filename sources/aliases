@@ -75,6 +75,11 @@ if command_exists "$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"; then
   alias opencode="$HOME/.asdf/installs/nodejs/25.2.1/bin/opencode"
 fi
 
+# Copilot CLI with all permissions
+if command_exists copilot; then
+  alias c='copilot --allow-all'
+fi
+
 # Copilot session finder
 if executable_exists "$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"; then
   alias cs="$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"
