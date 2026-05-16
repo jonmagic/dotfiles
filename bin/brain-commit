@@ -1,10 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-export PATH="$HOME/.asdf/installs/nodejs/25.2.1/bin:/opt/homebrew/bin:/usr/bin:/bin"
+export MISE_GLOBAL_CONFIG_FILE="${MISE_GLOBAL_CONFIG_FILE:-$HOME/.config/mise/config.toml}"
+export MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES="${MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES:-none}"
+export PATH="$HOME/.local/share/mise/shims:$HOME/.asdf/installs/nodejs/25.2.1/bin:/opt/homebrew/bin:/usr/bin:/bin"
 export GIT_TERMINAL_PROMPT=0
 ssh-add --apple-use-keychain ~/.ssh/jonmagic_github 2>/dev/null || true
-COPILOT="$HOME/.asdf/installs/nodejs/25.2.1/bin/copilot"
+COPILOT="$(command -v copilot || true)"
+if [ -z "$COPILOT" ]; then
+  echo "$(date): copilot executable not found" >> /tmp/brain-commit.log
+  exit 1
+fi
 LOCK="/tmp/brain-commit.lock"
 LOG="/tmp/brain-commit.log"
 TIMEOUT=300
