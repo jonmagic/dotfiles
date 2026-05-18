@@ -37,7 +37,9 @@ load_asdf() {
     source "$asdf_sh"
   fi
 
-  safe_source "$HOME/.asdf/plugins/java/set-java-home.zsh"
+  if command -v asdf >/dev/null 2>&1; then
+    safe_source "$HOME/.asdf/plugins/java/set-java-home.zsh"
+  fi
 }
 
 load_asdf
