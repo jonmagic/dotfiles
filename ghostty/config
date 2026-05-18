@@ -26,6 +26,9 @@ scrollback-limit = 100000000
 # Let zsh hooks control tab titles (not Ghostty's built-in)
 shell-integration-features = no-title
 
+# Allow remote tmux sessions to copy into the macOS clipboard via OSC 52.
+clipboard-write = allow
+
 # --- Mac-specific niceties ------------------------------------------
 
 macos-titlebar-style = tabs
