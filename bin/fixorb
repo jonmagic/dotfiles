@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Repair OrbStack when it is stuck in Starting.
+set -euo pipefail
+
+APP_PATH="/Applications/OrbStack.app"
+BUNDLE_ID="dev.kdrag0n.MacVirt"
+ORB_BIN="${ORB_BIN:-$(command -v orb 2>/dev/null || true)}"
+STATUS_TIMEOUT="${STATUS_TIMEOUT:-20}"
+START_TIMEOUT="${START_TIMEOUT:-90}"
+FORCE="${1:-}"
+
+if [[ ! -d "$APP_PATH" ]]; then
+  echo "OrbStack app not found at $APP_PATH" >&2
+  exit 1
+fi
+
+if [[ -z "$ORB_BIN" ]]; then
+  echo "orb CLI not found on PATH" >&2
+  exit 1
+fi
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  local tmp status cmdpid guardpid
+  tmp="$(mktemp -t fixorb.XXXXXX)"
+
+  "$@" >"$tmp" 2>&1 &
+  cmdpid=$!
+
+  (
+    sleep "$seconds"
+    if kill -0 "$cmdpid" 2>/dev/null; then
+      kill "$cmdpid" 2>/dev/null || true
+      echo "__TIMEOUT__" >>"$tmp"
+    fi
+  ) &
+  guardpid=$!
+
+  wait "$cmdpid" 2>/dev/null || status=$?
+  status="${status:-0}"
+  kill "$guardpid" 2>/dev/null || true
+
+  cat "$tmp"
+  rm -f "$tmp"
+  return "$status"
+}
+
+orb_status() {
+  run_with_timeout "$STATUS_TIMEOUT" "$ORB_BIN" status
+}
+
+if [[ "$FORCE" != "--force" ]]; then
+  status_output="$(orb_status || true)"
+  if [[ "$status_output" == "Running" ]]; then
+    echo "OrbStack is already running."
+    exit 0
+  fi
+
+  echo "OrbStack status is not healthy:"
+  echo "$status_output"
+  echo
+fi
+
+echo "Quitting OrbStack..."
+osascript -e "tell application id \"$BUNDLE_ID\" to quit" >/dev/null 2>&1 || \
+  osascript -e 'tell application "OrbStack" to quit' >/dev/null 2>&1 || true
+sleep 5
+
+pids="$(
+  ps -axo pid=,command= | awk -v app="$APP_PATH" '
+    index($0, app) > 0 {
+      pid = $1
+      print pid
+    }
+  '
+)"
+
+if [[ -n "$pids" ]]; then
+  echo "Terminating stale OrbStack process IDs: $(echo "$pids" | tr '\n' ' ')"
+  for pid in $pids; do
+    kill "$pid" 2>/dev/null || true
+  done
+
+  sleep 5
+
+  for pid in $pids; do
+    if ps -p "$pid" >/dev/null 2>&1; then
+      echo "Force-terminating unresponsive OrbStack process ID: $pid"
+      kill -KILL "$pid" 2>/dev/null || true
+    fi
+  done
+fi
+
+echo "Starting OrbStack..."
+open -a OrbStack
+
+deadline=$((SECONDS + START_TIMEOUT))
+while (( SECONDS < deadline )); do
+  status_output="$(orb_status || true)"
+  if [[ "$status_output" == "Running" ]]; then
+    echo "OrbStack is running."
+    "$ORB_BIN" list
+    exit 0
+  fi
+  sleep 3
+done
+
+echo "OrbStack did not report Running within ${START_TIMEOUT}s." >&2
+echo "Last status output:" >&2
+echo "$status_output" >&2
+exit 1

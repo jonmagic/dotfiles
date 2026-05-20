@@ -76,6 +76,7 @@ script_override_description() {
   case "$1" in
     brain-commit) printf '%s\n' "Run the Brain auto-commit workflow" ;;
     fixcs) printf '%s\n' "Repair GitHub Codespaces port forwarding" ;;
+    fixorb) printf '%s\n' "Repair OrbStack when it is stuck in Starting" ;;
     help) printf '%s\n' "Show the dotfiles command guide" ;;
     llm) printf '%s\n' "Run a single-shot GitHub Copilot prompt through llm" ;;
     ocw) printf '%s\n' "Share OpenCode over Tailscale for work" ;;
@@ -335,7 +336,7 @@ print_workflows() {
   print_workflow_section "AI and editing" c copilot llm ee
   print_workflow_section "Repo work" flow repo commit
   print_workflow_section "Meetings and brain" am
-  print_workflow_section "Remote machines" wasp
+  print_workflow_section "Remote machines" fixorb wasp
   print_workflow_section "On-demand instructions" ollama
   printf '%s  Use help all for the full source inventory, including under-the-hood helpers.%s\n' "$DIM" "$RESET"
 }
