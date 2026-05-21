@@ -45,28 +45,21 @@ trap "rm -f $LOG" EXIT
     skip_step "Upgrading gh extensions" "GitHub CLI not installed"
   fi
 
-  # 3. asdf plugins
-  if command -v asdf &>/dev/null; then
-    run_step "Upgrading asdf plugins" asdf plugin update --all
-  else
-    skip_step "Upgrading asdf plugins" "asdf not installed"
-  fi
-
-  # 4. Global npm packages
+  # 3. Global npm packages
   if command -v npm &>/dev/null; then
     run_step "Upgrading global npm packages" npm update -g
   else
     skip_step "Upgrading global npm packages" "npm not installed"
   fi
 
-  # 5. mise packages
+  # 4. mise packages
   if command -v mise &>/dev/null; then
     run_step "Upgrading mise packages" mise upgrade
   else
     skip_step "Upgrading mise packages" "mise not installed"
   fi
 
-  # 6. Homebrew
+  # 5. Homebrew
   if command -v brew &>/dev/null; then
     echo "==> Upgrading homebrew"
     brew update && brew outdated && brew upgrade && brew bundle cleanup --force --no-vscode --file="$BREWFILE"

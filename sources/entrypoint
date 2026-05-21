@@ -9,40 +9,6 @@ safe_source() {
   return 1
 }
 
-load_asdf() {
-  local asdf_sh=""
-  local candidates=(
-    "$HOME/.asdf/asdf.sh"
-    "$HOME/.asdf/libexec/asdf.sh"
-    "/opt/homebrew/opt/asdf/libexec/asdf.sh"
-    "/usr/local/opt/asdf/libexec/asdf.sh"
-  )
-
-  if command -v brew >/dev/null 2>&1; then
-    local brew_prefix
-    brew_prefix="$(brew --prefix asdf 2>/dev/null)"
-    if [[ -n "$brew_prefix" ]]; then
-      candidates+=("$brew_prefix/libexec/asdf.sh")
-    fi
-  fi
-
-  for candidate in "${candidates[@]}"; do
-    if [[ -f "$candidate" ]]; then
-      asdf_sh="$candidate"
-      break
-    fi
-  done
-
-  if [[ -n "$asdf_sh" ]]; then
-    source "$asdf_sh"
-  fi
-
-  if command -v asdf >/dev/null 2>&1; then
-    safe_source "$HOME/.asdf/plugins/java/set-java-home.zsh"
-  fi
-}
-
-load_asdf
 safe_source "$HOME/.local/bin/env"
 
 if [[ $OSTYPE = darwin* ]]; then
