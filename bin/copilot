@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# GitHub Copilot CLI — always uses the global mise node, immune to per-project overrides.
+NODE_DIR="$HOME/.local/share/mise/installs/node/25"
+exec "$NODE_DIR/bin/node" "$NODE_DIR/lib/node_modules/@github/copilot/npm-loader.js" "$@"

@@ -186,11 +186,11 @@ trap "rm -f $LOG" EXIT
     skip_step "Upgrading Mac App Store apps" "mas CLI not installed"
   fi
 
-  # 9. Copilot CLI
-  if command -v gh &>/dev/null; then
-    run_step "Upgrading Copilot CLI" gh copilot -- update
+  # 9. Copilot CLI (standalone npm install, not the gh extension)
+  if command -v npm &>/dev/null; then
+    run_step "Upgrading Copilot CLI" npm install -g @github/copilot@prerelease
   else
-    skip_step "Upgrading Copilot CLI" "GitHub CLI not installed"
+    skip_step "Upgrading Copilot CLI" "npm not installed"
   fi
 
 } 2>&1 | tee "$LOG"

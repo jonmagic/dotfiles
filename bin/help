@@ -75,11 +75,11 @@ humanize_name() {
 script_override_description() {
   case "$1" in
     brain-commit) printf '%s\n' "Run the Brain auto-commit workflow" ;;
+    copilot) printf '%s\n' "GitHub Copilot CLI (pinned to global mise node)" ;;
     fixcs) printf '%s\n' "Repair GitHub Codespaces port forwarding" ;;
     fixorb) printf '%s\n' "Repair OrbStack when it is stuck in Starting" ;;
     help) printf '%s\n' "Show the dotfiles command guide" ;;
     llm) printf '%s\n' "Run a single-shot GitHub Copilot prompt through llm" ;;
-    ocw) printf '%s\n' "Share OpenCode over Tailscale for work" ;;
     ollama-service) printf '%s\n' "Manage the on-demand Ollama launchd service" ;;
     path) printf '%s\n' "Print PATH entries one per line" ;;
     repo) printf '%s\n' "Open the current repo origin in a browser" ;;
