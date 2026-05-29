@@ -62,7 +62,7 @@ trap "rm -f $LOG" EXIT
   # 5. Homebrew
   if command -v brew &>/dev/null; then
     echo "==> Upgrading homebrew"
-    brew update && brew outdated && brew upgrade && brew bundle cleanup --force --no-vscode --file="$BREWFILE"
+    brew update && brew outdated && brew upgrade && brew bundle cleanup --force --file="$BREWFILE"
     echo ""
   else
     skip_step "Upgrading homebrew" "Homebrew not installed"
