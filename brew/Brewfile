@@ -35,7 +35,6 @@ brew "heroku/brew/heroku"
 brew "htmlq"
 brew "icu4c@76"
 brew "imagemagick"
-brew "imsg"
 brew "jpeg"
 brew "jq"
 brew "kafka", restart_service: :changed
