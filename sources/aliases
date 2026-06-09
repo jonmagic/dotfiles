@@ -112,8 +112,15 @@ if executable_exists "$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"
   alias cs="$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"
 fi
 
-# Tailscale personal SSH to wasp; w1-w9 attach tmux with clipboard copy enabled.
+# Tailscale personal SSH to remote machines; w1-w9 attach tmux on wasp with clipboard copy enabled.
 if command_exists tsp-ssh; then
+  nas() {
+    if [[ $# -eq 0 ]]; then
+      tsp-ssh -tt tnas 'stty sane 2>/dev/null; export LS_COLORS="di=01;34:ln=01;36:so=01;35:pi=33:ex=01;32:bd=01;33:cd=01;33:su=37;41:sg=01;33:tw=01;34:ow=01;34"; exec "${SHELL:-/bin/sh}" -l'
+    else
+      tsp-ssh tnas "$@"
+    fi
+  }
   alias wasp='tsp-ssh wasp'
 
   _wasp_tmux_remote_command() {
