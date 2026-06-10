@@ -114,7 +114,7 @@ fi
 
 # Corpus Loop
 if executable_exists "$HOME/github/corpus-loop/bin/cl"; then
-  alias cl="$HOME/github/corpus-loop/bin/cl"
+  alias corpus="$HOME/github/corpus-loop/bin/cl"
 fi
 
 # Personal SSH to remote machines; uses direct SSH unless the work Tailscale profile needs the OrbStack proxy.
