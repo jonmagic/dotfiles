@@ -90,7 +90,7 @@ script_override_description() {
     tsp-socks) printf '%s\n' "Start a SOCKS proxy through the personal OrbStack tailnet" ;;
     tsp-ssh) printf '%s\n' "SSH through the personal OrbStack tailnet" ;;
     tsw) printf '%s\n' "Start the work Tailscale profile" ;;
-    update-software) printf '%s\n' "Update software and hand the results to Copilot" ;;
+    update-software) printf '%s\n' "Update software with safer defaults and hand results to Copilot" ;;
     *) return 1 ;;
   esac
 }

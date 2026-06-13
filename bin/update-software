@@ -6,7 +6,58 @@ set -uo pipefail
 
 BREWFILE="$HOME/.dotfiles/brew/Brewfile"
 LOG=$(mktemp)
+UPDATE_MODE="safe"
+RUN_BREW_CLEANUP=0
+SKIP_MAS=0
+SKIP_MISE=0
 trap "rm -f $LOG" EXIT
+
+usage() {
+  cat <<'EOF'
+Usage: update-software [--all] [--cleanup] [--no-mas] [--no-mise]
+
+Without flags, runs safer defaults:
+  - updates Copilot CLI, Homebrew core formulae, mise, and Mac App Store apps
+  - defers broad non-Copilot plugin/package/cask updates
+  - never runs destructive Brewfile cleanup
+
+Options:
+  --safe        Run the default safer update pass
+  --all, --full Include deferred non-Copilot update lanes for this run
+  --cleanup     Remove software not listed in the Brewfile after updating
+  --no-mas      Skip Mac App Store updates
+  --no-mise     Skip mise runtime/tool updates
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all|--full)
+      UPDATE_MODE="all"
+      ;;
+    --safe)
+      UPDATE_MODE="safe"
+      ;;
+    --cleanup)
+      RUN_BREW_CLEANUP=1
+      ;;
+    --no-mas)
+      SKIP_MAS=1
+      ;;
+    --no-mise)
+      SKIP_MISE=1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
 
 # Tee all output so the user sees it live AND we capture it for Copilot.
 {
@@ -31,20 +82,19 @@ trap "rm -f $LOG" EXIT
     echo ""
   }
 
-  truthy() {
-    local value="${${1:-}:l}"
-    [[ -n "$value" && "$value" != "0" && "$value" != "false" && "$value" != "no" ]]
+  all_updates_enabled() {
+    [[ "$UPDATE_MODE" == "all" ]]
   }
 
-  guarded_step() {
+  deferred_step() {
     local name="$1"
-    local env_var="$2"
+    local reason="$2"
     shift 2
 
-    if truthy "${(P)env_var:-}"; then
+    if all_updates_enabled; then
       run_step "$name" "$@"
     else
-      skip_step "$name" "guarded supply-chain lane; set ${env_var}=1 to enable"
+      skip_step "$name" "$reason; run update-software --all to include it"
     fi
   }
 
@@ -123,27 +173,27 @@ trap "rm -f $LOG" EXIT
 
     if (( ${#third_party_formulae[@]} != 0 )); then
       echo ""
-      if truthy "${UPDATE_SOFTWARE_UPDATE_THIRD_PARTY_BREW:-}"; then
+      if all_updates_enabled; then
         echo "Upgrading third-party Homebrew formulae:"
         printf ' - %s\n' "${third_party_formulae[@]}"
         brew upgrade --formula "${third_party_formulae[@]}"
       else
         echo "Skipped third-party Homebrew formulae:"
         printf ' - %s\n' "${third_party_formulae[@]}"
-        echo "Set UPDATE_SOFTWARE_UPDATE_THIRD_PARTY_BREW=1 to enable this guarded supply-chain lane."
+        echo "Run update-software --all to include them."
       fi
     fi
 
     if (( ${#unclassified_formulae[@]} != 0 )); then
       echo ""
-      if truthy "${UPDATE_SOFTWARE_UPDATE_UNCLASSIFIED_BREW:-}"; then
+      if all_updates_enabled; then
         echo "Upgrading unclassified Homebrew formulae:"
         printf ' - %s\n' "${unclassified_formulae[@]}"
         brew upgrade --formula "${unclassified_formulae[@]}"
       else
         echo "Skipped unclassified Homebrew formulae:"
         printf ' - %s\n' "${unclassified_formulae[@]}"
-        echo "Set UPDATE_SOFTWARE_UPDATE_UNCLASSIFIED_BREW=1 to enable this guarded supply-chain lane."
+        echo "Run update-software --all to include them."
       fi
     fi
   }
@@ -162,18 +212,17 @@ trap "rm -f $LOG" EXIT
     printf '%s\n' "$outdated_casks"
     echo ""
 
-    if truthy "${UPDATE_SOFTWARE_UPDATE_BREW_CASKS:-}"; then
+    if all_updates_enabled; then
       cask_list=("${(@f)outdated_casks}")
       brew upgrade --cask "${cask_list[@]}"
     else
       echo "Skipped Homebrew casks."
-      echo "Set UPDATE_SOFTWARE_UPDATE_BREW_CASKS=1 to enable this guarded supply-chain lane."
+      echo "Run update-software --all to include them."
     fi
   }
 
   upgrade_homebrew() {
     local trust_status=0
-    local bundle_cleanup="${UPDATE_SOFTWARE_BREW_BUNDLE_CLEANUP:-}"
 
     brew update
 
@@ -187,39 +236,39 @@ trap "rm -f $LOG" EXIT
     echo ""
     upgrade_homebrew_casks
 
-    if [[ -n "$bundle_cleanup" && "$bundle_cleanup" != "0" && "$bundle_cleanup" != "false" ]]; then
+    if (( RUN_BREW_CLEANUP != 0 )); then
       brew bundle cleanup --force --file="$BREWFILE"
     else
       echo ""
-      echo "Brewfile cleanup disabled by default; set UPDATE_SOFTWARE_BREW_BUNDLE_CLEANUP=1 to remove software not listed in $BREWFILE."
+      echo "Brewfile cleanup disabled by default; run update-software --cleanup to remove software not listed in $BREWFILE."
     fi
   }
 
   # 1. Antigen
   if [[ -f "$HOME/.dotfiles/sources/terminal" ]]; then
-    guarded_step "Upgrading antigen plugins" UPDATE_SOFTWARE_UPDATE_ANTIGEN zsh -lc 'source "$HOME/.dotfiles/sources/terminal" && antigen update'
+    deferred_step "Upgrading antigen plugins" "direct GitHub plugin updates are deferred by the safe default" zsh -lc 'source "$HOME/.dotfiles/sources/terminal" && antigen update'
   else
     skip_step "Upgrading antigen plugins" "terminal config not found at ~/.dotfiles/sources/terminal"
   fi
 
   # 2. gh extensions
   if command -v gh &>/dev/null; then
-    guarded_step "Upgrading gh extensions" UPDATE_SOFTWARE_UPDATE_GH_EXTENSIONS gh extension upgrade --all
+    deferred_step "Upgrading gh extensions" "GitHub extension updates are deferred by the safe default" gh extension upgrade --all
   else
     skip_step "Upgrading gh extensions" "GitHub CLI not installed"
   fi
 
   # 3. Global npm packages
   if command -v npm &>/dev/null; then
-    guarded_step "Upgrading global npm packages" UPDATE_SOFTWARE_UPDATE_GLOBAL_NPM npm update -g
+    deferred_step "Upgrading global npm packages" "blanket global npm updates are deferred by the safe default" npm update -g
   else
     skip_step "Upgrading global npm packages" "npm not installed"
   fi
 
   # 4. mise packages
   if command -v mise &>/dev/null; then
-    if truthy "${UPDATE_SOFTWARE_SKIP_MISE:-}"; then
-      skip_step "Upgrading mise packages" "disabled by UPDATE_SOFTWARE_SKIP_MISE"
+    if (( SKIP_MISE != 0 )); then
+      skip_step "Upgrading mise packages" "disabled by --no-mise"
     else
       run_step "Upgrading mise packages" mise upgrade
     fi
@@ -238,7 +287,6 @@ trap "rm -f $LOG" EXIT
     local mas_bin=""
     local outdated_apps=""
     local outdated_status=0
-    local skip_mas="${UPDATE_SOFTWARE_SKIP_MAS:-}"
     local skip_app_ids_raw="${UPDATE_SOFTWARE_SKIP_MAS_APP_IDS:-}"
     local app_line=""
     local app_id=""
@@ -253,8 +301,8 @@ trap "rm -f $LOG" EXIT
     mas_bin="$(command -v mas)"
     mas_cmd=(env MAS_NO_AUTO_INDEX=1 "$mas_bin")
 
-    if [[ -n "$skip_mas" && "$skip_mas" != "0" && "$skip_mas" != "false" ]]; then
-      echo "Mac App Store upgrades disabled by UPDATE_SOFTWARE_SKIP_MAS."
+    if (( SKIP_MAS != 0 )); then
+      echo "Mac App Store upgrades disabled by --no-mas."
       return 0
     fi
 
@@ -341,7 +389,7 @@ trap "rm -f $LOG" EXIT
   # 7. llm plugins
   if command -v llm &>/dev/null; then
     llm_bin="$(command -v llm)"
-    guarded_step "Upgrading llm GitHub Copilot plugin" UPDATE_SOFTWARE_UPDATE_LLM_PLUGIN "$llm_bin" install --upgrade llm-github-copilot
+    deferred_step "Upgrading llm GitHub Copilot plugin" "PyPI plugin updates are deferred by the safe default" "$llm_bin" install --upgrade llm-github-copilot
   else
     skip_step "Upgrading llm GitHub Copilot plugin" "llm not installed"
   fi
@@ -379,16 +427,13 @@ Known intentional behavior:
   to a different Apple Account, so the script intentionally skips it.
 - Copilot CLI prerelease updates are an accepted-risk fast lane and should stay
   automatic.
-- Guarded non-Copilot lanes intentionally skip unless enabled:
-  UPDATE_SOFTWARE_UPDATE_ANTIGEN=1, UPDATE_SOFTWARE_UPDATE_GH_EXTENSIONS=1,
-  UPDATE_SOFTWARE_UPDATE_GLOBAL_NPM=1, UPDATE_SOFTWARE_UPDATE_LLM_PLUGIN=1,
-  UPDATE_SOFTWARE_UPDATE_THIRD_PARTY_BREW=1,
-  UPDATE_SOFTWARE_UPDATE_UNCLASSIFIED_BREW=1, and
-  UPDATE_SOFTWARE_UPDATE_BREW_CASKS=1.
-- mise stays enabled by default for runtime security updates; set
-  UPDATE_SOFTWARE_SKIP_MISE=1 to skip it.
+- Safe mode is the default. It updates Copilot CLI, Homebrew core formulae,
+  mise, and Mac App Store apps, while deferring broad non-Copilot plugin,
+  package, third-party Homebrew, unclassified Homebrew, and cask updates.
+- Deferred safe-mode lanes are not failures. Suggest update-software --all only
+  when the user intentionally wants the broader update pass.
 - Brewfile cleanup is destructive and intentionally opt-in with
-  UPDATE_SOFTWARE_BREW_BUNDLE_CLEANUP=1.
+  update-software --cleanup.
 
 Output:
 $(cat "$LOG")
