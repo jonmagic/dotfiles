@@ -31,6 +31,55 @@ trap "rm -f $LOG" EXIT
     echo ""
   }
 
+  trust_homebrew_bundle_formulae() {
+    local formulae=""
+    local formula=""
+    local trust_status=0
+
+    if [[ ! -f "$BREWFILE" ]]; then
+      return 0
+    fi
+
+    if ! brew trust --help >/dev/null 2>&1; then
+      return 0
+    fi
+
+    formulae="$(sed -nE 's/^[[:space:]]*brew[[:space:]]+"([^"]+\/[^"]+\/[^"]+)".*/\1/p' "$BREWFILE")"
+    if [[ -z "${formulae//[[:space:]]/}" ]]; then
+      return 0
+    fi
+
+    echo "Trusting Brewfile-scoped third-party formulae:"
+    while IFS= read -r formula; do
+      [[ -n "$formula" ]] || continue
+      echo " - $formula"
+      brew trust --formula "$formula" || trust_status=$?
+    done <<< "$formulae"
+    echo ""
+
+    return $trust_status
+  }
+
+  upgrade_homebrew() {
+    local trust_status=0
+    local bundle_cleanup="${UPDATE_SOFTWARE_BREW_BUNDLE_CLEANUP:-}"
+
+    trust_homebrew_bundle_formulae || trust_status=$?
+    if (( trust_status != 0 )); then
+      echo "One or more Brewfile-scoped formulae could not be trusted; Homebrew may still require manual trust."
+      echo ""
+    fi
+
+    brew update && brew outdated && brew upgrade
+
+    if [[ -n "$bundle_cleanup" && "$bundle_cleanup" != "0" && "$bundle_cleanup" != "false" ]]; then
+      brew bundle cleanup --force --file="$BREWFILE"
+    else
+      echo ""
+      echo "Brewfile cleanup disabled by default; set UPDATE_SOFTWARE_BREW_BUNDLE_CLEANUP=1 to remove software not listed in $BREWFILE."
+    fi
+  }
+
   # 1. Antigen
   if [[ -f "$HOME/.dotfiles/sources/terminal" ]]; then
     run_step "Upgrading antigen plugins" zsh -lc 'source "$HOME/.dotfiles/sources/terminal" && antigen update'
@@ -61,9 +110,7 @@ trap "rm -f $LOG" EXIT
 
   # 5. Homebrew
   if command -v brew &>/dev/null; then
-    echo "==> Upgrading homebrew"
-    brew update && brew outdated && brew upgrade && brew bundle cleanup --force --file="$BREWFILE"
-    echo ""
+    run_step "Upgrading homebrew" upgrade_homebrew
   else
     skip_step "Upgrading homebrew" "Homebrew not installed"
   fi
@@ -206,6 +253,10 @@ Here is the output from my software update script. Please:
 2. Flag any errors, warnings, or deprecation notices that need attention.
 3. If there are actionable follow-up items (e.g. deprecated packages to replace,
    failed updates to retry, security notices), list them clearly.
+
+Known intentional behavior:
+- Push Security Mac App Store app id 1596916655 is employer-installed and tied
+  to a different Apple Account, so the script intentionally skips it.
 
 Output:
 $(cat "$LOG")
