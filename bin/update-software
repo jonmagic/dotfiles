@@ -18,8 +18,22 @@ Usage: update-software [--all] [--cleanup] [--no-mas] [--no-mise]
 
 Without flags, runs safer defaults:
   - updates Copilot CLI, Homebrew core formulae, mise, and Mac App Store apps
-  - defers broad non-Copilot plugin/package/cask updates
+  - reports but defers broad non-Copilot plugin/package/cask updates
   - never runs destructive Brewfile cleanup
+
+Safe mode updates:
+  - Copilot CLI prerelease
+  - Homebrew core formulae
+  - mise-managed runtimes/tools
+  - Mac App Store apps, except known skipped app ids
+
+--all additionally updates:
+  - Antigen plugins
+  - gh extensions
+  - global npm packages
+  - third-party and unclassified Homebrew formulae
+  - Homebrew casks
+  - llm GitHub Copilot plugin from PyPI
 
 Options:
   --safe        Run the default safer update pass
