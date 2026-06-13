@@ -31,6 +31,28 @@ trap "rm -f $LOG" EXIT
     echo ""
   }
 
+  truthy() {
+    local value="${${1:-}:l}"
+    [[ -n "$value" && "$value" != "0" && "$value" != "false" && "$value" != "no" ]]
+  }
+
+  guarded_step() {
+    local name="$1"
+    local env_var="$2"
+    shift 2
+
+    if truthy "${(P)env_var:-}"; then
+      run_step "$name" "$@"
+    else
+      skip_step "$name" "guarded supply-chain lane; set ${env_var}=1 to enable"
+    fi
+  }
+
+  homebrew_formula_tap() {
+    brew info --json=v2 --formula "$1" |
+      ruby -rjson -e 'formula = JSON.parse(STDIN.read).fetch("formulae").first; puts formula["tap"].to_s'
+  }
+
   trust_homebrew_bundle_formulae() {
     local formulae=""
     local formula=""
@@ -60,9 +82,100 @@ trap "rm -f $LOG" EXIT
     return $trust_status
   }
 
+  upgrade_homebrew_formulae() {
+    local outdated_formulae=""
+    local formula=""
+    local tap=""
+    local -a core_formulae=()
+    local -a third_party_formulae=()
+    local -a unclassified_formulae=()
+
+    outdated_formulae="$(brew outdated --formula)"
+    if [[ -z "${outdated_formulae//[[:space:]]/}" ]]; then
+      echo "All Homebrew formulae are up to date."
+      return 0
+    fi
+
+    echo "Outdated Homebrew formulae:"
+    printf '%s\n' "$outdated_formulae"
+    echo ""
+
+    while IFS= read -r formula; do
+      [[ -n "$formula" ]] || continue
+
+      tap="$(homebrew_formula_tap "$formula" 2>/dev/null || true)"
+      if [[ "$tap" == "homebrew/core" ]]; then
+        core_formulae+=("$formula")
+      elif [[ -z "$tap" ]]; then
+        unclassified_formulae+=("$formula")
+      else
+        third_party_formulae+=("$formula")
+      fi
+    done <<< "$outdated_formulae"
+
+    if (( ${#core_formulae[@]} != 0 )); then
+      echo "Upgrading Homebrew core formulae:"
+      printf ' - %s\n' "${core_formulae[@]}"
+      brew upgrade --formula "${core_formulae[@]}"
+    else
+      echo "No outdated Homebrew core formulae."
+    fi
+
+    if (( ${#third_party_formulae[@]} != 0 )); then
+      echo ""
+      if truthy "${UPDATE_SOFTWARE_UPDATE_THIRD_PARTY_BREW:-}"; then
+        echo "Upgrading third-party Homebrew formulae:"
+        printf ' - %s\n' "${third_party_formulae[@]}"
+        brew upgrade --formula "${third_party_formulae[@]}"
+      else
+        echo "Skipped third-party Homebrew formulae:"
+        printf ' - %s\n' "${third_party_formulae[@]}"
+        echo "Set UPDATE_SOFTWARE_UPDATE_THIRD_PARTY_BREW=1 to enable this guarded supply-chain lane."
+      fi
+    fi
+
+    if (( ${#unclassified_formulae[@]} != 0 )); then
+      echo ""
+      if truthy "${UPDATE_SOFTWARE_UPDATE_UNCLASSIFIED_BREW:-}"; then
+        echo "Upgrading unclassified Homebrew formulae:"
+        printf ' - %s\n' "${unclassified_formulae[@]}"
+        brew upgrade --formula "${unclassified_formulae[@]}"
+      else
+        echo "Skipped unclassified Homebrew formulae:"
+        printf ' - %s\n' "${unclassified_formulae[@]}"
+        echo "Set UPDATE_SOFTWARE_UPDATE_UNCLASSIFIED_BREW=1 to enable this guarded supply-chain lane."
+      fi
+    fi
+  }
+
+  upgrade_homebrew_casks() {
+    local outdated_casks=""
+    local -a cask_list=()
+
+    outdated_casks="$(brew outdated --cask)"
+    if [[ -z "${outdated_casks//[[:space:]]/}" ]]; then
+      echo "All Homebrew casks are up to date."
+      return 0
+    fi
+
+    echo "Outdated Homebrew casks:"
+    printf '%s\n' "$outdated_casks"
+    echo ""
+
+    if truthy "${UPDATE_SOFTWARE_UPDATE_BREW_CASKS:-}"; then
+      cask_list=("${(@f)outdated_casks}")
+      brew upgrade --cask "${cask_list[@]}"
+    else
+      echo "Skipped Homebrew casks."
+      echo "Set UPDATE_SOFTWARE_UPDATE_BREW_CASKS=1 to enable this guarded supply-chain lane."
+    fi
+  }
+
   upgrade_homebrew() {
     local trust_status=0
     local bundle_cleanup="${UPDATE_SOFTWARE_BREW_BUNDLE_CLEANUP:-}"
+
+    brew update
 
     trust_homebrew_bundle_formulae || trust_status=$?
     if (( trust_status != 0 )); then
@@ -70,7 +183,9 @@ trap "rm -f $LOG" EXIT
       echo ""
     fi
 
-    brew update && brew outdated && brew upgrade
+    upgrade_homebrew_formulae
+    echo ""
+    upgrade_homebrew_casks
 
     if [[ -n "$bundle_cleanup" && "$bundle_cleanup" != "0" && "$bundle_cleanup" != "false" ]]; then
       brew bundle cleanup --force --file="$BREWFILE"
@@ -82,28 +197,32 @@ trap "rm -f $LOG" EXIT
 
   # 1. Antigen
   if [[ -f "$HOME/.dotfiles/sources/terminal" ]]; then
-    run_step "Upgrading antigen plugins" zsh -lc 'source "$HOME/.dotfiles/sources/terminal" && antigen update'
+    guarded_step "Upgrading antigen plugins" UPDATE_SOFTWARE_UPDATE_ANTIGEN zsh -lc 'source "$HOME/.dotfiles/sources/terminal" && antigen update'
   else
     skip_step "Upgrading antigen plugins" "terminal config not found at ~/.dotfiles/sources/terminal"
   fi
 
   # 2. gh extensions
   if command -v gh &>/dev/null; then
-    run_step "Upgrading gh extensions" gh extension upgrade --all
+    guarded_step "Upgrading gh extensions" UPDATE_SOFTWARE_UPDATE_GH_EXTENSIONS gh extension upgrade --all
   else
     skip_step "Upgrading gh extensions" "GitHub CLI not installed"
   fi
 
   # 3. Global npm packages
   if command -v npm &>/dev/null; then
-    run_step "Upgrading global npm packages" npm update -g
+    guarded_step "Upgrading global npm packages" UPDATE_SOFTWARE_UPDATE_GLOBAL_NPM npm update -g
   else
     skip_step "Upgrading global npm packages" "npm not installed"
   fi
 
   # 4. mise packages
   if command -v mise &>/dev/null; then
-    run_step "Upgrading mise packages" mise upgrade
+    if truthy "${UPDATE_SOFTWARE_SKIP_MISE:-}"; then
+      skip_step "Upgrading mise packages" "disabled by UPDATE_SOFTWARE_SKIP_MISE"
+    else
+      run_step "Upgrading mise packages" mise upgrade
+    fi
   else
     skip_step "Upgrading mise packages" "mise not installed"
   fi
@@ -220,8 +339,9 @@ trap "rm -f $LOG" EXIT
   }
 
   # 7. llm plugins
-  if [[ -x /opt/homebrew/bin/llm ]]; then
-    run_step "Upgrading llm GitHub Copilot plugin" /opt/homebrew/bin/llm install --upgrade llm-github-copilot
+  if command -v llm &>/dev/null; then
+    llm_bin="$(command -v llm)"
+    guarded_step "Upgrading llm GitHub Copilot plugin" UPDATE_SOFTWARE_UPDATE_LLM_PLUGIN "$llm_bin" install --upgrade llm-github-copilot
   else
     skip_step "Upgrading llm GitHub Copilot plugin" "llm not installed"
   fi
@@ -257,6 +377,18 @@ Here is the output from my software update script. Please:
 Known intentional behavior:
 - Push Security Mac App Store app id 1596916655 is employer-installed and tied
   to a different Apple Account, so the script intentionally skips it.
+- Copilot CLI prerelease updates are an accepted-risk fast lane and should stay
+  automatic.
+- Guarded non-Copilot lanes intentionally skip unless enabled:
+  UPDATE_SOFTWARE_UPDATE_ANTIGEN=1, UPDATE_SOFTWARE_UPDATE_GH_EXTENSIONS=1,
+  UPDATE_SOFTWARE_UPDATE_GLOBAL_NPM=1, UPDATE_SOFTWARE_UPDATE_LLM_PLUGIN=1,
+  UPDATE_SOFTWARE_UPDATE_THIRD_PARTY_BREW=1,
+  UPDATE_SOFTWARE_UPDATE_UNCLASSIFIED_BREW=1, and
+  UPDATE_SOFTWARE_UPDATE_BREW_CASKS=1.
+- mise stays enabled by default for runtime security updates; set
+  UPDATE_SOFTWARE_SKIP_MISE=1 to skip it.
+- Brewfile cleanup is destructive and intentionally opt-in with
+  UPDATE_SOFTWARE_BREW_BUNDLE_CLEANUP=1.
 
 Output:
 $(cat "$LOG")
