@@ -17,19 +17,19 @@ usage() {
 Usage: update-software [--all] [--cleanup] [--no-mas] [--no-mise]
 
 Without flags, runs safer defaults:
-  - updates Copilot CLI, Homebrew core formulae, mise, and Mac App Store apps
+  - updates Copilot CLI, gh extensions, Homebrew core formulae, mise, and Mac App Store apps
   - reports but defers broad non-Copilot plugin/package/cask updates
   - never runs destructive Brewfile cleanup
 
 Safe mode updates:
   - Copilot CLI prerelease
+  - gh extensions
   - Homebrew core formulae
   - mise-managed runtimes/tools
   - Mac App Store apps, except known skipped app ids
 
 --all additionally updates:
   - Antigen plugins
-  - gh extensions
   - global npm packages
   - third-party and unclassified Homebrew formulae
   - Homebrew casks
@@ -267,7 +267,7 @@ done
 
   # 2. gh extensions
   if command -v gh &>/dev/null; then
-    deferred_step "Upgrading gh extensions" "GitHub extension updates are deferred by the safe default" gh extension upgrade --all
+    run_step "Upgrading gh extensions" gh extension upgrade --all
   else
     skip_step "Upgrading gh extensions" "GitHub CLI not installed"
   fi
@@ -441,9 +441,10 @@ Known intentional behavior:
   to a different Apple Account, so the script intentionally skips it.
 - Copilot CLI prerelease updates are an accepted-risk fast lane and should stay
   automatic.
-- Safe mode is the default. It updates Copilot CLI, Homebrew core formulae,
-  mise, and Mac App Store apps, while deferring broad non-Copilot plugin,
-  package, third-party Homebrew, unclassified Homebrew, and cask updates.
+- Safe mode is the default. It updates Copilot CLI, gh extensions,
+  Homebrew core formulae, mise, and Mac App Store apps, while deferring broad
+  non-Copilot plugin, package, third-party Homebrew, unclassified Homebrew,
+  and cask updates.
 - Deferred safe-mode lanes are not failures. Suggest update-software --all only
   when the user intentionally wants the broader update pass.
 - Brewfile cleanup is destructive and intentionally opt-in with
