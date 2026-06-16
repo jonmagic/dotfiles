@@ -112,16 +112,76 @@ if executable_exists "$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"
   alias cs="$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"
 fi
 
-# Tailscale personal SSH to remote machines; w1-w9 attach tmux on wasp with clipboard copy enabled.
-if command_exists tsp-ssh; then
-  nas() {
-    if [[ $# -eq 0 ]]; then
-      tsp-ssh -tt tnas 'stty sane 2>/dev/null; export LS_COLORS="di=01;34:ln=01;36:so=01;35:pi=33:ex=01;32:bd=01;33:cd=01;33:su=37;41:sg=01;33:tw=01;34:ow=01;34"; exec "${SHELL:-/bin/sh}" -l'
+# Personal SSH to remote machines; uses direct SSH unless the work Tailscale profile needs the OrbStack proxy.
+if command_exists ssh; then
+  _personal_tailnet_ssh_route() {
+    case "${DOTFILES_PERSONAL_SSH_ROUTE:-auto}" in
+      direct|ssh)
+        printf '%s\n' ssh
+        return 0
+        ;;
+      tsp|orbstack)
+        printf '%s\n' tsp
+        return 0
+        ;;
+      auto|"")
+        ;;
+      *)
+        echo "DOTFILES_PERSONAL_SSH_ROUTE must be auto, direct, ssh, tsp, or orbstack." >&2
+        return 2
+        ;;
+    esac
+
+    local tailscale_bin
+    tailscale_bin="$(_command_path tailscale || true)"
+    if [[ -z "$tailscale_bin" && -x "$HOME/.dotfiles/bin/tailscale" ]]; then
+      tailscale_bin="$HOME/.dotfiles/bin/tailscale"
+    fi
+
+    if [[ -n "$tailscale_bin" ]] && command_exists tsp-ssh && "$tailscale_bin" switch --list 2>/dev/null | awk '
+      NR == 1 { next }
+      {
+        account = $3
+        active = account ~ /\*$/
+        sub(/\*$/, "", account)
+
+        if (active && ($2 == "github.com" || account == "work" || account == "jonmagic@github.com")) {
+          found = 1
+          exit
+        }
+      }
+
+      END { exit found ? 0 : 1 }
+    '; then
+      printf '%s\n' tsp
+      return 0
+    fi
+
+    printf '%s\n' ssh
+  }
+
+  _personal_tailnet_ssh() {
+    local route
+    route="$(_personal_tailnet_ssh_route)" || return
+
+    if [[ "$route" == tsp ]]; then
+      tsp-ssh "$@"
     else
-      tsp-ssh tnas "$@"
+      ssh "$@"
     fi
   }
-  alias wasp='tsp-ssh wasp'
+
+  # SSH to the NAS, using direct SSH unless work Tailscale needs the OrbStack proxy.
+  nas() {
+    if [[ $# -eq 0 ]]; then
+      _personal_tailnet_ssh -tt tnas 'stty sane 2>/dev/null; export LS_COLORS="di=01;34:ln=01;36:so=01;35:pi=33:ex=01;32:bd=01;33:cd=01;33:su=37;41:sg=01;33:tw=01;34:ow=01;34"; exec "${SHELL:-/bin/sh}" -l'
+    else
+      _personal_tailnet_ssh tnas "$@"
+    fi
+  }
+
+  # SSH to wasp, using direct SSH unless work Tailscale needs the OrbStack proxy.
+  alias wasp='_personal_tailnet_ssh wasp'
 
   _wasp_tmux_remote_command() {
     local session="$1"
@@ -151,7 +211,7 @@ EOF
     fi
 
     local remote_command="$(_wasp_tmux_remote_command "$session")"
-    tsp-ssh wasp -t "zsh -lc ${(qq)remote_command}"
+    _personal_tailnet_ssh wasp -t "zsh -lc ${(qq)remote_command}"
   }
 
   for session in {1..9}; do
