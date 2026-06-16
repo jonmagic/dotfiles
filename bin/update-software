@@ -400,12 +400,58 @@ done
     fi
   }
 
+  homebrew_llm_bin() {
+    local brew_prefix=""
+
+    if [[ -x /opt/homebrew/bin/llm ]]; then
+      echo "/opt/homebrew/bin/llm"
+      return 0
+    fi
+
+    if [[ -x /usr/local/bin/llm ]]; then
+      echo "/usr/local/bin/llm"
+      return 0
+    fi
+
+    if command -v brew &>/dev/null; then
+      brew_prefix="$(brew --prefix 2>/dev/null)" || return 1
+      if [[ -x "$brew_prefix/bin/llm" ]]; then
+        echo "$brew_prefix/bin/llm"
+        return 0
+      fi
+    fi
+
+    return 1
+  }
+
+  ensure_llm_installed() {
+    if homebrew_llm_bin >/dev/null; then
+      return 0
+    fi
+
+    if ! command -v brew &>/dev/null; then
+      echo "Homebrew not installed; cannot install llm."
+      return 1
+    fi
+
+    brew install llm
+    homebrew_llm_bin >/dev/null
+  }
+
   # 7. llm plugins
   llm_wrapper="$HOME/.dotfiles/bin/llm"
-  if [[ -x "$llm_wrapper" ]]; then
-    deferred_step "Upgrading llm GitHub Copilot plugin" "Plugin updates are deferred by the safe default" "$llm_wrapper" upgrade-copilot-plugin
-  else
+  llm_bin=""
+  if command -v brew &>/dev/null || homebrew_llm_bin >/dev/null; then
+    run_step "Ensuring llm is installed" ensure_llm_installed
+    llm_bin="$(homebrew_llm_bin 2>/dev/null || true)"
+  fi
+
+  if [[ -x "$llm_wrapper" && -n "$llm_bin" ]]; then
+    deferred_step "Upgrading llm GitHub Copilot plugin" "Plugin updates are deferred by the safe default" env LLM_BIN="$llm_bin" "$llm_wrapper" upgrade-copilot-plugin
+  elif [[ ! -x "$llm_wrapper" ]]; then
     skip_step "Upgrading llm GitHub Copilot plugin" "Copilot llm wrapper not installed"
+  else
+    skip_step "Upgrading llm GitHub Copilot plugin" "llm not installed and Homebrew unavailable"
   fi
 
   # 8. Mac App Store
