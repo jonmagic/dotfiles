@@ -1,11 +1,59 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# GitHub Copilot CLI — prefer Homebrew when available, otherwise use the global
-# npm install from the active toolchain (mise on this machine).
-if [[ -x /opt/homebrew/bin/node && -f /opt/homebrew/lib/node_modules/@github/copilot/npm-loader.js ]]; then
-  exec /opt/homebrew/bin/node /opt/homebrew/lib/node_modules/@github/copilot/npm-loader.js "$@"
-fi
+run_copilot() {
+  local node_bin="$1"
+  local npm_loader="$2"
+  shift 2
+
+  if [[ -x "$node_bin" && -f "$npm_loader" ]]; then
+    exec "$node_bin" "$npm_loader" "$@"
+  fi
+}
+
+# GitHub Copilot CLI — use a known global install instead of project-local
+# shims, so `c` keeps working inside repos with their own toolchain pins.
+for homebrew_prefix in /opt/homebrew /usr/local; do
+  run_copilot \
+    "$homebrew_prefix/bin/node" \
+    "$homebrew_prefix/lib/node_modules/@github/copilot/npm-loader.js" \
+    "$@"
+done
+
+shopt -s nullglob
+
+mise_nodes=("$HOME"/.local/share/mise/installs/node/*)
+for ((i=${#mise_nodes[@]} - 1; i >= 0; i--)); do
+  run_copilot \
+    "${mise_nodes[$i]}/bin/node" \
+    "${mise_nodes[$i]}/lib/node_modules/@github/copilot/npm-loader.js" \
+    "$@"
+done
+
+nvm_nodes=("${NVM_DIR:-$HOME/.nvm}"/versions/node/*)
+for ((i=${#nvm_nodes[@]} - 1; i >= 0; i--)); do
+  run_copilot \
+    "${nvm_nodes[$i]}/bin/node" \
+    "${nvm_nodes[$i]}/lib/node_modules/@github/copilot/npm-loader.js" \
+    "$@"
+done
+
+fnm_nodes=("$HOME"/.local/share/fnm/node-versions/*/installation)
+for ((i=${#fnm_nodes[@]} - 1; i >= 0; i--)); do
+  run_copilot \
+    "${fnm_nodes[$i]}/bin/node" \
+    "${fnm_nodes[$i]}/lib/node_modules/@github/copilot/npm-loader.js" \
+    "$@"
+done
+
+volta_copilot_loaders=("$HOME"/.volta/tools/image/packages/@github/copilot/lib/node_modules/@github/copilot/npm-loader.js)
+for npm_loader in "${volta_copilot_loaders[@]}"; do
+  for node_bin in "$HOME"/.volta/tools/image/node/*/bin/node "$HOME"/.volta/bin/node; do
+    run_copilot "$node_bin" "$npm_loader" "$@"
+  done
+done
+
+shopt -u nullglob
 
 if command -v npm >/dev/null 2>&1; then
   npm_root="$(npm root -g 2>/dev/null || true)"
