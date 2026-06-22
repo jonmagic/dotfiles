@@ -75,7 +75,7 @@ humanize_name() {
 script_override_description() {
   case "$1" in
     brain-commit) printf '%s\n' "Run the Brain auto-commit workflow" ;;
-    copilot) printf '%s\n' "GitHub Copilot CLI (pinned to global mise node)" ;;
+    copilot) printf '%s\n' "GitHub Copilot CLI wrapper using Homebrew or global npm" ;;
     fixcs) printf '%s\n' "Repair GitHub Codespaces port forwarding" ;;
     fixorb) printf '%s\n' "Repair OrbStack when it is stuck in Starting" ;;
     help) printf '%s\n' "Show the dotfiles command guide" ;;

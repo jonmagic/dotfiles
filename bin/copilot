@@ -1,3 +1,19 @@
 #!/usr/bin/env bash
-# GitHub Copilot CLI — uses Homebrew node, immune to per-project mise overrides.
-exec /opt/homebrew/bin/node /opt/homebrew/lib/node_modules/@github/copilot/npm-loader.js "$@"
+set -euo pipefail
+
+# GitHub Copilot CLI — prefer Homebrew when available, otherwise use the global
+# npm install from the active toolchain (mise on this machine).
+if [[ -x /opt/homebrew/bin/node && -f /opt/homebrew/lib/node_modules/@github/copilot/npm-loader.js ]]; then
+  exec /opt/homebrew/bin/node /opt/homebrew/lib/node_modules/@github/copilot/npm-loader.js "$@"
+fi
+
+if command -v npm >/dev/null 2>&1; then
+  npm_root="$(npm root -g 2>/dev/null || true)"
+  if [[ -n "$npm_root" && -f "$npm_root/@github/copilot/npm-loader.js" ]]; then
+    exec node "$npm_root/@github/copilot/npm-loader.js" "$@"
+  fi
+fi
+
+echo "GitHub Copilot CLI is not installed in Homebrew or global npm." >&2
+echo "Run: npm install -g @github/copilot@prerelease" >&2
+exit 127
