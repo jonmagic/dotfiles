@@ -83,6 +83,7 @@ script_override_description() {
     ollama-service) printf '%s\n' "Manage the on-demand Ollama launchd service" ;;
     path) printf '%s\n' "Print PATH entries one per line" ;;
     repo) printf '%s\n' "Open the current repo origin in a browser" ;;
+    splunk-mcp-service) printf '%s\n' "Run the long-lived Splunk MCP watchdog service" ;;
     tailscale) printf '%s\n' "Wrapper for the Tailscale CLI" ;;
     ts-stop) printf '%s\n' "Stop work Tailscale or the personal OrbStack tailnet" ;;
     tsp) printf '%s\n' "Start the personal OrbStack tailnet" ;;
