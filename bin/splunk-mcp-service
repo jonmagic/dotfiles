@@ -14,6 +14,8 @@ FAILURES_BEFORE_RESTART="${FAILURES_BEFORE_RESTART:-3}"
 DOCKER_FAILURES_BEFORE_FIXORB="${DOCKER_FAILURES_BEFORE_FIXORB:-6}"
 FIXORB="${FIXORB:-$HOME/.dotfiles/bin/fixorb}"
 FIXORB_COOLDOWN="${FIXORB_COOLDOWN:-600}"
+OPENAPI_TIMEOUT="${OPENAPI_TIMEOUT:-10}"
+MCP_PROBE_TIMEOUT="${MCP_PROBE_TIMEOUT:-20}"
 
 log() {
   echo "$(date '+%Y-%m-%dT%H:%M:%S') $*"
@@ -90,7 +92,33 @@ container_running() {
 }
 
 endpoint_healthy() {
-  /usr/bin/curl --max-time 3 -fsS "http://127.0.0.1:${PORT}/openapi.json" >/dev/null
+  /usr/bin/curl --connect-timeout 3 --max-time "$OPENAPI_TIMEOUT" -fsS "http://127.0.0.1:${PORT}/openapi.json" >/dev/null
+}
+
+mcp_healthy() {
+  "$DOCKER" exec "$NAME" /bin/sh -lc '
+    set -eu
+    python - <<'"'"'PY'"'"'
+import asyncio
+import os
+
+from mcp import ClientSession
+from mcp.client.sse import sse_client
+
+
+async def main():
+    port = os.environ.get("FASTMCP_PORT", "8001")
+    async with sse_client(f"http://127.0.0.1:{port}/sse") as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool("ping", {})
+            if getattr(result, "isError", False):
+                raise SystemExit(1)
+
+
+asyncio.run(asyncio.wait_for(main(), timeout=float(os.environ.get("MCP_PROBE_TIMEOUT", "20"))))
+PY
+  ' >/dev/null
 }
 
 splunk_reachable() {
@@ -113,13 +141,14 @@ start_container() {
   "$DOCKER" rm -f "$NAME" >/dev/null 2>&1 || true
   "$DOCKER" run -d --name "$NAME" \
     --restart unless-stopped \
-    --health-cmd "curl -fsS --max-time 3 http://127.0.0.1:${PORT}/openapi.json >/dev/null || exit 1" \
+    --health-cmd "curl -fsS --connect-timeout 3 --max-time ${OPENAPI_TIMEOUT} http://127.0.0.1:${PORT}/openapi.json >/dev/null || exit 1" \
     --health-interval 30s \
-    --health-timeout 5s \
+    --health-timeout "$((OPENAPI_TIMEOUT + 2))s" \
     --health-retries 3 \
     --health-start-period 10s \
     --dns=100.100.100.100 \
     -p 127.0.0.1:${PORT}:${PORT} \
+    -e MCP_PROBE_TIMEOUT="$MCP_PROBE_TIMEOUT" \
     --env-file "$ENV_FILE" \
     "$IMAGE" python splunk_mcp.py sse >/dev/null
 }
@@ -146,7 +175,7 @@ while true; do
     continue
   fi
 
-  if endpoint_healthy && splunk_reachable; then
+  if endpoint_healthy && mcp_healthy && splunk_reachable; then
     health_failures=0
     continue
   fi

@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# Diagnose or repair the long-lived Splunk MCP service.
+set -euo pipefail
+
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+LABEL="${LABEL:-com.jonmagic.splunk-mcp}"
+NAME="${NAME:-splunk-mcp}"
+PORT="${PORT:-8001}"
+DOCKER="${DOCKER:-$(command -v docker)}"
+MCP_PROBE_TIMEOUT="${MCP_PROBE_TIMEOUT:-20}"
+
+usage() {
+  cat <<EOF
+Usage: splunk-mcp-doctor [--fix]
+
+Checks launchd, Docker, the Splunk MCP container, and a full MCP initialize+ping
+probe. With --fix, restarts the LaunchAgent if the MCP probe fails.
+EOF
+}
+
+log() {
+  echo "$(date '+%Y-%m-%dT%H:%M:%S') $*"
+}
+
+launch_label() {
+  echo "gui/$(id -u)/${LABEL}"
+}
+
+docker_ready() {
+  "$DOCKER" info >/dev/null 2>&1
+}
+
+container_running() {
+  [[ "$("$DOCKER" inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null || true)" == "true" ]]
+}
+
+container_health() {
+  "$DOCKER" inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$NAME" 2>/dev/null || true
+}
+
+mcp_probe() {
+  "$DOCKER" exec -e MCP_PROBE_TIMEOUT="$MCP_PROBE_TIMEOUT" "$NAME" /bin/sh -lc '
+    set -eu
+    python - <<'"'"'PY'"'"'
+import asyncio
+import os
+
+from mcp import ClientSession
+from mcp.client.sse import sse_client
+
+
+async def main():
+    port = os.environ.get("FASTMCP_PORT", "8001")
+    async with sse_client(f"http://127.0.0.1:{port}/sse") as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool("ping", {})
+            if getattr(result, "isError", False):
+                raise SystemExit(1)
+
+
+asyncio.run(asyncio.wait_for(main(), timeout=float(os.environ.get("MCP_PROBE_TIMEOUT", "20"))))
+PY
+  ' >/dev/null
+}
+
+restart_service() {
+  log "restarting ${LABEL}"
+  launchctl kickstart -k "$(launch_label)"
+}
+
+fix=false
+case "${1:-}" in
+  "")
+    ;;
+  --fix)
+    fix=true
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+log "checking launchd service"
+launchctl print "$(launch_label)" >/dev/null
+
+log "checking Docker daemon"
+docker_ready
+
+log "checking ${NAME} container"
+container_running
+log "container health: $(container_health)"
+
+if mcp_probe; then
+  log "MCP initialize+ping probe: ok"
+  exit 0
+fi
+
+log "MCP initialize+ping probe: failed"
+
+if [[ "$fix" != true ]]; then
+  log "run 'splunk-mcp-doctor --fix' to restart the service"
+  exit 1
+fi
+
+restart_service
+sleep 10
+
+if ! container_running; then
+  log "${NAME} is not running after restart"
+  exit 1
+fi
+
+if mcp_probe; then
+  log "MCP initialize+ping probe after restart: ok"
+  exit 0
+fi
+
+log "MCP initialize+ping probe after restart: failed"
+exit 1
