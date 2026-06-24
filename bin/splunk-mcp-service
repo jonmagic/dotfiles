@@ -11,6 +11,7 @@ PORT="${PORT:-8001}"
 ENV_FILE="${ENV_FILE:-$HOME/.config/splunk-mcp/splunk-mcp.env}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
 FAILURES_BEFORE_RESTART="${FAILURES_BEFORE_RESTART:-3}"
+RESTARTS_BEFORE_FIXORB="${RESTARTS_BEFORE_FIXORB:-2}"
 DOCKER_FAILURES_BEFORE_FIXORB="${DOCKER_FAILURES_BEFORE_FIXORB:-6}"
 FIXORB="${FIXORB:-$HOME/.dotfiles/bin/fixorb}"
 FIXORB_COOLDOWN="${FIXORB_COOLDOWN:-600}"
@@ -56,6 +57,7 @@ docker_ready() {
 maybe_fix_orbstack() {
   local now
   now="$(date +%s)"
+  FIXORB_RAN=0
 
   if [[ ! -x "$FIXORB" ]]; then
     return 0
@@ -66,7 +68,8 @@ maybe_fix_orbstack() {
   fi
 
   LAST_FIXORB_AT="$now"
-  log "docker daemon still unavailable; running fixorb"
+  FIXORB_RAN=1
+  log "running fixorb to recover OrbStack"
   export ORB_BIN="${ORB_BIN:-$(command -v orb 2>/dev/null || true)}"
   run_with_timeout 180 "$FIXORB" --force || true
 }
@@ -154,7 +157,9 @@ start_container() {
 }
 
 LAST_FIXORB_AT=0
+FIXORB_RAN=0
 health_failures=0
+restart_attempts=0
 
 start_container
 
@@ -165,6 +170,7 @@ while true; do
     log "docker daemon health check failed"
     maybe_fix_orbstack
     health_failures=0
+    restart_attempts=0
     continue
   fi
 
@@ -172,11 +178,13 @@ while true; do
     log "${NAME} is not running"
     start_container
     health_failures=0
+    restart_attempts=0
     continue
   fi
 
   if endpoint_healthy && mcp_healthy && splunk_reachable; then
     health_failures=0
+    restart_attempts=0
     continue
   fi
 
@@ -184,6 +192,20 @@ while true; do
   log "${NAME} health check failed (${health_failures}/${FAILURES_BEFORE_RESTART})"
 
   if (( health_failures >= FAILURES_BEFORE_RESTART )); then
+    if endpoint_healthy; then
+      restart_attempts=0
+    else
+      restart_attempts=$((restart_attempts + 1))
+
+      if (( restart_attempts >= RESTARTS_BEFORE_FIXORB )); then
+        log "${NAME} endpoint unreachable after ${restart_attempts} restart(s); escalating to fixorb (likely wedged OrbStack VM network)"
+        maybe_fix_orbstack
+        if (( FIXORB_RAN == 1 )); then
+          restart_attempts=0
+        fi
+      fi
+    fi
+
     log "restarting ${NAME} after repeated health check failures"
     start_container
     health_failures=0
