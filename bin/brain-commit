@@ -14,43 +14,42 @@ fi
 LOCK="/tmp/brain-commit.lock"
 LOG="/tmp/brain-commit.log"
 TIMEOUT=300
-RUN_SENTINEL=""
 
 cleanup() {
   rm -f "$LOCK"
-  if [ -n "${RUN_SENTINEL:-}" ] && [ -f "$RUN_SENTINEL" ]; then
-    rm -f "$RUN_SENTINEL"
-  fi
 }
 
-cleanup_copilot_run_artifacts() {
-  if [ -z "${RUN_SENTINEL:-}" ] || [ ! -f "$RUN_SENTINEL" ]; then
-    return
-  fi
+cleanup_brain_commit_sessions() {
+  local session_state_dir="$HOME/.copilot/session-state"
 
-  # Remove session state directories created by this run
-  find "$HOME/.copilot/session-state" -maxdepth 1 -mindepth 1 -type d -newer "$RUN_SENTINEL" -print0 2>/dev/null | \
-    while IFS= read -r -d '' session_dir; do
-      workspace_file="$session_dir/workspace.yaml"
-      if [ -f "$workspace_file" ] && \
-         grep -Fq 'cwd: /Users/jonmagic/Brain' "$workspace_file" && \
-         grep -Fq 'summary: commit brain' "$workspace_file"; then
-        rm -rf "$session_dir"
-        echo "$(date): removed copilot session state $session_dir" >> "$LOG"
-      fi
-    done
+  # Remove Brain commit-agent session directories from both current and prior runs.
+  # The workspace metadata uses `name`, while the SQLite session index uses `summary`.
+  if [ -d "$session_state_dir" ]; then
+    find "$session_state_dir" -maxdepth 2 -mindepth 2 -name workspace.yaml -type f -print0 2>/dev/null | \
+      while IFS= read -r -d '' workspace_file; do
+        session_dir="$(dirname "$workspace_file")"
+        if grep -Fxq "cwd: $BRAIN_DIR" "$workspace_file" && \
+           grep -Fxq 'repository: jonmagic/brain' "$workspace_file" && \
+           grep -Fxq 'name: commit brain' "$workspace_file" && \
+           grep -Fxq 'user_named: false' "$workspace_file"; then
+          rm -rf "$session_dir"
+          echo "$(date): removed copilot session state $session_dir" >> "$LOG"
+        fi
+      done
+  fi
 
   # Remove "commit brain" sessions from session-store.db so they don't
   # clutter copilot-sessions search results
   local session_db="$HOME/.copilot/session-store.db"
-  if [ -f "$session_db" ]; then
+  if [ -f "$session_db" ] && command -v sqlite3 >/dev/null 2>&1; then
     sqlite3 "$session_db" "
-      DELETE FROM search_index WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
-      DELETE FROM session_refs WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
-      DELETE FROM session_files WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
-      DELETE FROM checkpoints WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
-      DELETE FROM turns WHERE session_id IN (SELECT id FROM sessions WHERE summary = 'commit brain');
-      DELETE FROM sessions WHERE summary = 'commit brain';
+      PRAGMA busy_timeout = 5000;
+      DELETE FROM search_index WHERE session_id IN (SELECT id FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain');
+      DELETE FROM session_refs WHERE session_id IN (SELECT id FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain');
+      DELETE FROM session_files WHERE session_id IN (SELECT id FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain');
+      DELETE FROM checkpoints WHERE session_id IN (SELECT id FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain');
+      DELETE FROM turns WHERE session_id IN (SELECT id FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain');
+      DELETE FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain';
     " 2>/dev/null && \
       echo "$(date): cleaned commit brain sessions from session-store.db" >> "$LOG" || \
       echo "$(date): failed to clean session-store.db" >> "$LOG"
@@ -75,6 +74,7 @@ cd "$HOME/Brain" || exit 1
 
 # Keep Copilot's shared home for auth and installed skills, but trim old daemon logs.
 find "$HOME/.copilot/logs" -maxdepth 1 -type f -name 'process-*.log' -mtime +7 -delete 2>/dev/null || true
+cleanup_brain_commit_sessions
 
 # Skip if nothing to commit
 if [ -z "$(git status --porcelain)" ]; then
@@ -123,8 +123,6 @@ else
   echo "$(date): gh auth token unavailable, using default copilot home auth state" >> "$LOG"
 fi
 
-RUN_SENTINEL="$(mktemp "${TMPDIR:-/tmp}/brain-commit-sentinel.XXXXXX")"
-
 env "${copilot_env[@]}" "$COPILOT" \
   --available-tools bash read_bash write_bash stop_bash list_bash view glob grep skill \
   --disable-builtin-mcps \
@@ -158,4 +156,4 @@ else
   echo "$(date): completed successfully" >> "$LOG"
 fi
 
-cleanup_copilot_run_artifacts
+cleanup_brain_commit_sessions
