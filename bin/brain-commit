@@ -13,7 +13,8 @@ if [ -z "$COPILOT" ]; then
 fi
 LOCK="/tmp/brain-commit.lock"
 LOG="/tmp/brain-commit.log"
-TIMEOUT=300
+TIMEOUT=900
+BRAIN_DIR="${BRAIN_DIR:-$HOME/Brain}"
 
 cleanup() {
   rm -f "$LOCK"
@@ -50,7 +51,7 @@ cleanup_brain_commit_sessions() {
       DELETE FROM checkpoints WHERE session_id IN (SELECT id FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain');
       DELETE FROM turns WHERE session_id IN (SELECT id FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain');
       DELETE FROM sessions WHERE cwd = '$BRAIN_DIR' AND repository = 'jonmagic/brain' AND summary = 'commit brain';
-    " 2>/dev/null && \
+    " >/dev/null 2>/dev/null && \
       echo "$(date): cleaned commit brain sessions from session-store.db" >> "$LOG" || \
       echo "$(date): failed to clean session-store.db" >> "$LOG"
   fi
