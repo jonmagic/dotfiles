@@ -4,6 +4,7 @@ set -euo pipefail
 
 LLM_BIN="${LLM_BIN:-/opt/homebrew/bin/llm}"
 DEFAULT_COPILOT_MODEL="${LLM_COPILOT_MODEL:-github_copilot/claude-opus-4.6}"
+COPILOT_PLUGIN_SPEC="llm-github-copilot==0.3.1"
 
 if [[ ! -x "$LLM_BIN" ]]; then
   echo "Homebrew llm not found at $LLM_BIN" >&2
@@ -22,6 +23,29 @@ has_model_arg() {
   done
 
   return 1
+}
+
+copilot_model_requested() {
+  local arg model="" next_is_model=0
+
+  for arg in "$@"; do
+    if (( next_is_model )); then
+      model="$arg"
+      next_is_model=0
+      continue
+    fi
+
+    case "$arg" in
+      -m|--model)
+        next_is_model=1
+        ;;
+      --model=*)
+        model="${arg#--model=}"
+        ;;
+    esac
+  done
+
+  [[ "$model" == github_copilot/* ]]
 }
 
 prompt_invocation() {
@@ -76,7 +100,7 @@ prompt_invocation() {
 }
 
 install_copilot_plugin() {
-  "$LLM_BIN" install --upgrade llm-github-copilot
+  "$LLM_BIN" install --upgrade "$COPILOT_PLUGIN_SPEC"
 }
 
 copilot_plugin_installed() {
@@ -133,15 +157,21 @@ if [[ "${1:-}" == "setup-copilot" ]]; then
   exit $?
 fi
 
-if prompt_invocation "$@" && ! has_model_arg "$@"; then
-  ensure_copilot_ready
+if prompt_invocation "$@"; then
+  if has_model_arg "$@"; then
+    if copilot_model_requested "$@"; then
+      ensure_copilot_ready
+    fi
+  else
+    ensure_copilot_ready
 
-  if [[ "${1:-}" == "prompt" ]]; then
-    shift
-    exec "$LLM_BIN" prompt -m "$DEFAULT_COPILOT_MODEL" "$@"
+    if [[ "${1:-}" == "prompt" ]]; then
+      shift
+      exec "$LLM_BIN" prompt -m "$DEFAULT_COPILOT_MODEL" "$@"
+    fi
+
+    exec "$LLM_BIN" -m "$DEFAULT_COPILOT_MODEL" "$@"
   fi
-
-  exec "$LLM_BIN" -m "$DEFAULT_COPILOT_MODEL" "$@"
 fi
 
 exec "$LLM_BIN" "$@"
