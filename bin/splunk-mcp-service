@@ -13,13 +13,37 @@ CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
 FAILURES_BEFORE_RESTART="${FAILURES_BEFORE_RESTART:-3}"
 RESTARTS_BEFORE_FIXORB="${RESTARTS_BEFORE_FIXORB:-2}"
 DOCKER_FAILURES_BEFORE_FIXORB="${DOCKER_FAILURES_BEFORE_FIXORB:-6}"
+DOCKER_TIMEOUT="${DOCKER_TIMEOUT:-15}"
+DOCKER_START_TIMEOUT="${DOCKER_START_TIMEOUT:-60}"
 FIXORB="${FIXORB:-$HOME/.dotfiles/bin/fixorb}"
 FIXORB_COOLDOWN="${FIXORB_COOLDOWN:-600}"
+AUTO_FIX_ORBSTACK="${AUTO_FIX_ORBSTACK:-0}"
 OPENAPI_TIMEOUT="${OPENAPI_TIMEOUT:-10}"
 MCP_PROBE_TIMEOUT="${MCP_PROBE_TIMEOUT:-20}"
+SPLUNK_REACHABLE_TIMEOUT="${SPLUNK_REACHABLE_TIMEOUT:-20}"
 
 log() {
   echo "$(date '+%Y-%m-%dT%H:%M:%S') $*"
+}
+
+terminate_tree() {
+  local pid="$1" child
+
+  while IFS= read -r child; do
+    [[ -n "$child" ]] && terminate_tree "$child"
+  done < <(pgrep -P "$pid" 2>/dev/null || true)
+
+  kill "$pid" 2>/dev/null || true
+}
+
+kill_tree() {
+  local pid="$1" child
+
+  while IFS= read -r child; do
+    [[ -n "$child" ]] && kill_tree "$child"
+  done < <(pgrep -P "$pid" 2>/dev/null || true)
+
+  kill -KILL "$pid" 2>/dev/null || true
 }
 
 run_with_timeout() {
@@ -34,7 +58,11 @@ run_with_timeout() {
   (
     sleep "$seconds"
     if kill -0 "$cmdpid" 2>/dev/null; then
-      kill "$cmdpid" 2>/dev/null || true
+      terminate_tree "$cmdpid"
+      sleep 2
+      if kill -0 "$cmdpid" 2>/dev/null; then
+        kill_tree "$cmdpid"
+      fi
       echo "__TIMEOUT__" >>"$tmp"
     fi
   ) &
@@ -51,13 +79,17 @@ run_with_timeout() {
 }
 
 docker_ready() {
-  run_with_timeout 10 "$DOCKER" info >/dev/null
+  run_with_timeout "$DOCKER_TIMEOUT" "$DOCKER" info >/dev/null
 }
 
 maybe_fix_orbstack() {
   local now
   now="$(date +%s)"
   FIXORB_RAN=0
+
+  if [[ "$AUTO_FIX_ORBSTACK" != "1" ]]; then
+    return 0
+  fi
 
   if [[ ! -x "$FIXORB" ]]; then
     return 0
@@ -82,7 +114,11 @@ wait_for_docker() {
     log "waiting for docker daemon..."
 
     if (( failures >= DOCKER_FAILURES_BEFORE_FIXORB )); then
-      maybe_fix_orbstack
+      if [[ "$AUTO_FIX_ORBSTACK" == "1" ]]; then
+        maybe_fix_orbstack
+      else
+        log "docker daemon still unavailable; waiting instead of restarting OrbStack"
+      fi
       failures=0
     fi
 
@@ -91,7 +127,9 @@ wait_for_docker() {
 }
 
 container_running() {
-  [[ "$("$DOCKER" inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null || true)" == "true" ]]
+  local output
+  output="$(run_with_timeout "$DOCKER_TIMEOUT" "$DOCKER" inspect -f '{{.State.Running}}' "$NAME" || true)"
+  [[ "$(printf '%s\n' "$output" | tail -n 1)" == "true" ]]
 }
 
 endpoint_healthy() {
@@ -99,7 +137,7 @@ endpoint_healthy() {
 }
 
 mcp_healthy() {
-  "$DOCKER" exec "$NAME" /bin/sh -lc '
+  run_with_timeout "$((MCP_PROBE_TIMEOUT + 5))" "$DOCKER" exec "$NAME" /bin/sh -lc '
     set -eu
     python - <<'"'"'PY'"'"'
 import asyncio
@@ -125,7 +163,7 @@ PY
 }
 
 splunk_reachable() {
-  "$DOCKER" exec "$NAME" /bin/sh -lc '
+  run_with_timeout "$SPLUNK_REACHABLE_TIMEOUT" "$DOCKER" exec "$NAME" /bin/sh -lc '
     set -eu
     getent hosts "$SPLUNK_HOST" >/dev/null
     code="$(curl -sS --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" \
@@ -141,9 +179,8 @@ start_container() {
   wait_for_docker
 
   log "starting ${NAME}"
-  "$DOCKER" rm -f "$NAME" >/dev/null 2>&1 || true
-  "$DOCKER" run -d --name "$NAME" \
-    --restart unless-stopped \
+  run_with_timeout "$DOCKER_TIMEOUT" "$DOCKER" rm -f "$NAME" >/dev/null || true
+  run_with_timeout "$DOCKER_START_TIMEOUT" "$DOCKER" run -d --name "$NAME" \
     --health-cmd "curl -fsS --connect-timeout 3 --max-time ${OPENAPI_TIMEOUT} http://127.0.0.1:${PORT}/openapi.json >/dev/null || exit 1" \
     --health-interval 30s \
     --health-timeout "$((OPENAPI_TIMEOUT + 2))s" \
@@ -167,7 +204,7 @@ while true; do
   sleep "$CHECK_INTERVAL"
 
   if ! docker_ready; then
-    log "docker daemon health check failed"
+    log "docker daemon health check failed; waiting for OrbStack to recover"
     maybe_fix_orbstack
     health_failures=0
     restart_attempts=0
@@ -198,8 +235,12 @@ while true; do
       restart_attempts=$((restart_attempts + 1))
 
       if (( restart_attempts >= RESTARTS_BEFORE_FIXORB )); then
-        log "${NAME} endpoint unreachable after ${restart_attempts} restart(s); escalating to fixorb (likely wedged OrbStack VM network)"
-        maybe_fix_orbstack
+        if [[ "$AUTO_FIX_ORBSTACK" == "1" ]]; then
+          log "${NAME} endpoint unreachable after ${restart_attempts} restart(s); running fixorb"
+          maybe_fix_orbstack
+        else
+          log "${NAME} endpoint unreachable after ${restart_attempts} restart(s); leaving OrbStack running"
+        fi
         if (( FIXORB_RAN == 1 )); then
           restart_attempts=0
         fi
