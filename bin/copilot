@@ -1,6 +1,94 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CREDENTIALS_FILE="${COPILOT_KEYCHAIN_CREDENTIALS_FILE:-$ROOT_DIR/sources/copilot-keychain-credentials}"
+
+load_keychain_credentials() {
+  [[ "$(uname -s)" == "Darwin" ]] || return 0
+
+  local security_bin="${SECURITY_BIN:-/usr/bin/security}"
+  local default_account="${USER:-}"
+  local line_number=0
+  local label env_var service account requirement extra secret
+
+  if [[ ! -x "$security_bin" ]]; then
+    echo "macOS Keychain helper not found: $security_bin" >&2
+    exit 1
+  fi
+
+  if [[ ! -r "$CREDENTIALS_FILE" ]]; then
+    echo "Copilot Keychain credential manifest not found: $CREDENTIALS_FILE" >&2
+    exit 1
+  fi
+
+  if [[ -z "$default_account" ]]; then
+    default_account="$(id -un)"
+  fi
+
+  while IFS='|' read -r label env_var service account requirement extra ||
+    [[ -n "${label}${env_var}${service}${account}${requirement}${extra}" ]]; do
+    ((line_number += 1))
+    requirement="${requirement%$'\r'}"
+
+    if [[ -z "${label//[[:space:]]/}" && -z "${env_var}${service}${account}${requirement}${extra}" ]]; then
+      continue
+    fi
+
+    if [[ "$label" == \#* ]]; then
+      continue
+    fi
+
+    if [[ -n "$extra" || -z "$label" || -z "$env_var" || -z "$service" || -z "$requirement" ]]; then
+      echo "Invalid Copilot credential manifest entry at $CREDENTIALS_FILE:$line_number." >&2
+      exit 1
+    fi
+
+    if [[ ! "$env_var" =~ ^COPILOT_MCP_[A-Z0-9_]+$ ]]; then
+      echo "Invalid Copilot credential environment variable '$env_var' at $CREDENTIALS_FILE:$line_number." >&2
+      exit 1
+    fi
+
+    case "$requirement" in
+      required|optional) ;;
+      *)
+        echo "Invalid Copilot credential requirement '$requirement' at $CREDENTIALS_FILE:$line_number." >&2
+        exit 1
+        ;;
+    esac
+
+    account="${account:-$default_account}"
+    unset "$env_var"
+    secret=""
+
+    if ! secret="$("$security_bin" find-generic-password \
+      -a "$account" \
+      -s "$service" \
+      -w 2>/dev/null)"; then
+      if [[ "$requirement" == "optional" ]]; then
+        continue
+      fi
+
+      echo "$label credential not found in macOS Keychain." >&2
+      echo "Add it under service '$service' and account '$account'." >&2
+      exit 1
+    fi
+
+    if [[ -z "$secret" ]]; then
+      if [[ "$requirement" == "optional" ]]; then
+        continue
+      fi
+
+      echo "$label credential in macOS Keychain is empty." >&2
+      exit 1
+    fi
+
+    printf -v "$env_var" '%s' "$secret"
+    export "$env_var"
+    unset secret
+  done <"$CREDENTIALS_FILE"
+}
+
 run_copilot() {
   local node_bin="$1"
   local npm_loader="$2"
@@ -10,6 +98,17 @@ run_copilot() {
     exec "$node_bin" "$npm_loader" "$@"
   fi
 }
+
+load_keychain_credentials
+
+if [[ -n "${COPILOT_BIN:-}" ]]; then
+  if [[ ! -x "$COPILOT_BIN" ]]; then
+    echo "Configured Copilot executable is not executable: $COPILOT_BIN" >&2
+    exit 127
+  fi
+
+  exec "$COPILOT_BIN" "$@"
+fi
 
 # GitHub Copilot CLI — use a known global install instead of project-local
 # shims, so `c` keeps working inside repos with their own toolchain pins.

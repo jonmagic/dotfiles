@@ -102,10 +102,10 @@ if command_exists git && command_exists llm; then
   alias gbb='git for-each-ref --sort=-committerdate --format="%(refname:short) - %(committerdate:short) - %(authorname) - %(subject)" refs/heads/ | llm "sort newest to oldest and format as a markdown table"'
 fi
 
-# GitHub Copilot CLI wrapper, using Homebrew or global npm.
+# GitHub Copilot CLI wrapper with credentials from macOS Keychain.
 if executable_exists "$HOME/.dotfiles/bin/copilot"; then
   alias copilot="$HOME/.dotfiles/bin/copilot"
-  alias c='copilot --allow-all'
+  alias c="$HOME/.dotfiles/bin/copilot --allow-all"
 fi
 
 # Copilot session finder
