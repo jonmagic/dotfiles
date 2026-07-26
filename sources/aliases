@@ -19,11 +19,11 @@ fi
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
   am() {
     local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-github_copilot/claude-opus-4.6}"
-    COMMITMENT_CAPTURE_AFTER_MEETING="${COMMITMENT_CAPTURE_AFTER_MEETING:-1}" \
-      ~/code/jonmagic/scripts/bin/archive-meeting \
+    ~/code/jonmagic/scripts/bin/archive-meeting \
       --brain-dir ~/Brain \
       --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md \
       --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md \
+      --task-capture-prompt-path ~/code/jonmagic/prompts/summarize/transcript-my-tasks.md \
       --model "$archive_meeting_model" \
       "$@"
   }
