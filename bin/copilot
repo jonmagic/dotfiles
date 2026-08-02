@@ -2,7 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CREDENTIALS_FILE="${COPILOT_KEYCHAIN_CREDENTIALS_FILE:-$ROOT_DIR/sources/copilot-keychain-credentials}"
+MACHINE_CREDENTIALS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/copilot-keychain-credentials"
+CREDENTIALS_FILE="${COPILOT_KEYCHAIN_CREDENTIALS_FILE:-$MACHINE_CREDENTIALS_FILE}"
+
+if [[ ! -e "$CREDENTIALS_FILE" && -z "${COPILOT_KEYCHAIN_CREDENTIALS_FILE:-}" ]]; then
+  CREDENTIALS_FILE="$ROOT_DIR/sources/copilot-keychain-credentials"
+fi
 
 load_keychain_credentials() {
   [[ "$(uname -s)" == "Darwin" ]] || return 0

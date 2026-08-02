@@ -19,19 +19,14 @@ Run `help` at any time to show the guide again, `help all` for the full implemen
 
 ## Copilot CLI credentials
 
-`copilot` and `c` run through `bin/copilot`. On macOS, the wrapper reads the
-credentials declared in `sources/copilot-keychain-credentials` and passes them
-to the launched Copilot process through environment variables. The manifest is
-non-secret and uses this format:
+`copilot` and `c` run through `bin/copilot`. On macOS, the wrapper first looks for a machine-local manifest at `${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/copilot-keychain-credentials`, then falls back to the repository manifest at `sources/copilot-keychain-credentials`. It passes declared credentials to the launched Copilot process through environment variables. The manifest is non-secret and uses this format:
 
 ```text
 # label|environment_variable|keychain_service|keychain_account|requiredness
-PagerDuty|COPILOT_MCP_PAGERDUTY_TOKEN|copilot-mcp-pagerduty||required
+Example|COPILOT_MCP_EXAMPLE_TOKEN|copilot-mcp-example||optional
 ```
 
-A blank account uses the current macOS user. Required credentials fail closed
-when their Keychain item is missing or empty; optional credentials are skipped.
-Set `COPILOT_KEYCHAIN_CREDENTIALS_FILE` to use a different non-secret manifest.
+A blank account uses the current macOS user. Required credentials fail closed when their Keychain item is missing or empty; optional credentials are skipped. Set `COPILOT_KEYCHAIN_CREDENTIALS_FILE` to use a different non-secret manifest. Keep work-only declarations in the machine-local manifest so personal machines use the empty repository fallback.
 
 To add another credential:
 
@@ -47,7 +42,4 @@ security add-generic-password \
   -w
 ```
 
-Keep `-w` last so the credential is prompted for rather than placed in shell
-history or process arguments. The current PagerDuty configuration references
-`${COPILOT_MCP_PAGERDUTY_TOKEN}`. Non-macOS installations skip the Keychain
-integration.
+Keep `-w` last so the credential is prompted for rather than placed in shell history or process arguments. Work-only integrations and credentials do not belong in this personal repository. Non-macOS installations skip the Keychain integration.
