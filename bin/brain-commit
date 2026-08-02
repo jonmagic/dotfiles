@@ -15,9 +15,14 @@ LOCK="/tmp/brain-commit.lock"
 LOG="/tmp/brain-commit.log"
 TIMEOUT=900
 BRAIN_DIR="${BRAIN_DIR:-$HOME/Brain}"
+EXPECTED_MANIFEST=""
+VERIFY_SYNC="$HOME/.copilot/skills/brain/scripts/verify-sync.sh"
 
 cleanup() {
   rm -f "$LOCK"
+  if [ -n "${EXPECTED_MANIFEST:-}" ] && [ -f "$EXPECTED_MANIFEST" ]; then
+    rm -f "$EXPECTED_MANIFEST"
+  fi
 }
 
 cleanup_brain_commit_sessions() {
@@ -71,11 +76,62 @@ echo $$ > "$LOCK"
 trap cleanup EXIT
 
 echo "$(date): starting brain commit" >> "$LOG"
-cd "$HOME/Brain" || exit 1
+cd "$BRAIN_DIR" || exit 1
 
 # Keep Copilot's shared home for auth and installed skills, but trim old daemon logs.
 find "$HOME/.copilot/logs" -maxdepth 1 -type f -name 'process-*.log' -mtime +7 -delete 2>/dev/null || true
 cleanup_brain_commit_sessions
+
+if [ ! -x "$VERIFY_SYNC" ]; then
+  echo "$(date): Brain sync verifier is missing or not executable: $VERIFY_SYNC" >> "$LOG"
+  exit 1
+fi
+
+EXPECTED_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/brain-expected-paths.XXXXXX")"
+{
+  git diff --no-renames --name-only -z
+  git diff --cached --no-renames --name-only -z
+  git ls-files --others --exclude-standard -z
+} | while IFS= read -r -d '' path; do
+  if [ -e "$path" ] || [ -L "$path" ]; then
+    if [ -L "$path" ]; then
+      blob="$(printf '%s' "$(readlink "$path")" | git hash-object --stdin)"
+    else
+      blob="$(git hash-object "$path")"
+    fi
+    printf 'present\0%s\0%s\0' "$path" "$blob"
+  else
+    printf 'absent\0%s\0\0' "$path"
+  fi
+done > "$EXPECTED_MANIFEST"
+
+verify_sync() {
+  local state path blob
+  local verify_args=()
+
+  while IFS= read -r -d '' state &&
+        IFS= read -r -d '' path &&
+        IFS= read -r -d '' blob; do
+    case "$state" in
+      present)
+        verify_args+=(--present "$path" "$blob")
+        ;;
+      absent)
+        verify_args+=(--absent "$path")
+        ;;
+      *)
+        echo "$(date): invalid expected-path state: $state" >> "$LOG"
+        return 1
+        ;;
+    esac
+  done < "$EXPECTED_MANIFEST"
+
+  if [ "${#verify_args[@]}" -eq 0 ]; then
+    "$VERIFY_SYNC" >> "$LOG" 2>&1
+  else
+    "$VERIFY_SYNC" "${verify_args[@]}" >> "$LOG" 2>&1
+  fi
+}
 
 # Skip if nothing to commit
 if [ -z "$(git status --porcelain)" ]; then
@@ -89,6 +145,11 @@ if [ -z "$(git status --porcelain)" ]; then
       echo "$(date): pushed unpushed commits" >> "$LOG" || \
       echo "$(date): push failed" >> "$LOG"
   fi
+  if ! verify_sync; then
+    echo "$(date): GitHub verification failed" >> "$LOG"
+    exit 1
+  fi
+  echo "$(date): verified GitHub main" >> "$LOG"
   echo "$(date): nothing to commit" >> "$LOG"
   exit 0
 fi
@@ -124,15 +185,23 @@ else
   echo "$(date): gh auth token unavailable, using default copilot home auth state" >> "$LOG"
 fi
 
-env "${copilot_env[@]}" "$COPILOT" \
-  --available-tools bash read_bash write_bash stop_bash list_bash view glob grep skill \
-  --disable-builtin-mcps \
-  --disable-mcp-server datadog \
-  --disable-mcp-server Sentry \
-  --allow-all-tools \
-  --add-dir ~/Brain \
-  --add-dir ~/.copilot/skills/brain \
-  -p "commit brain" >> "$LOG" 2>&1 &
+run_copilot() {
+  if [ "${#copilot_env[@]}" -eq 0 ]; then
+    exec "$COPILOT" "$@"
+  else
+    exec env "${copilot_env[@]}" "$COPILOT" "$@"
+  fi
+}
+
+run_copilot \
+    --available-tools bash read_bash write_bash stop_bash list_bash view glob grep skill \
+    --disable-builtin-mcps \
+    --disable-mcp-server datadog \
+    --disable-mcp-server Sentry \
+    --allow-all-tools \
+    --add-dir ~/Brain \
+    --add-dir ~/.copilot/skills/brain \
+    -p "commit brain" >> "$LOG" 2>&1 &
 copilot_pid=$!
 
 # Kill copilot if it exceeds the timeout
@@ -158,3 +227,9 @@ else
 fi
 
 cleanup_brain_commit_sessions
+
+if ! verify_sync; then
+  echo "$(date): GitHub verification failed; expected paths were not fully synchronized" >> "$LOG"
+  exit 1
+fi
+echo "$(date): verified all expected paths on GitHub main" >> "$LOG"
