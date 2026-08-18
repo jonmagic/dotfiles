@@ -108,6 +108,11 @@ if executable_exists "$HOME/.dotfiles/bin/copilot"; then
   alias c="$HOME/.dotfiles/bin/copilot --allow-all"
 fi
 
+# Local Pi coding agent backed by Qwen 3.8 27B through MTPLX.
+if executable_exists "$HOME/.dotfiles/bin/pi-local"; then
+  alias p="$HOME/.dotfiles/bin/pi-local"
+fi
+
 # Copilot session finder
 if executable_exists "$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"; then
   alias cs="$HOME/code/jonmagic/copilot-sessions/bin/copilot-sessions"

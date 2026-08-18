@@ -1,0 +1,21 @@
+{
+  "defaultProvider": "mtplx-local",
+  "defaultModel": "qwen3.8-27b-local",
+  "defaultThinkingLevel": "medium",
+  "defaultProjectTrust": "ask",
+  "defaultTools": [
+    "read",
+    "bash",
+    "edit",
+    "write",
+    "grep",
+    "find",
+    "ls"
+  ],
+  "enableInstallTelemetry": false,
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 32768,
+    "keepRecentTokens": 20000
+  }
+}

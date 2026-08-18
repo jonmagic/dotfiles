@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly MODEL_REPO="Youssofal/Qwen3.8-27B-MTPLX-Optimized-Speed"
+readonly MODEL_ID="qwen3.8-27b-local"
+readonly HOST="127.0.0.1"
+readonly PORT="8000"
+readonly BASE_URL="http://$HOST:$PORT"
+readonly STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/pi-local"
+readonly LOG_FILE="$STATE_DIR/mtplx.log"
+readonly PID_FILE="$STATE_DIR/mtplx.pid"
+readonly LOCK_DIR="$STATE_DIR/start.lock"
+readonly LOCK_PID_FILE="$LOCK_DIR/owner.pid"
+
+owns_lock=0
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Required command not found: $1" >&2
+    exit 127
+  fi
+}
+
+server_ready() {
+  local response
+
+  response="$(curl --fail --silent --show-error --max-time 2 "$BASE_URL/v1/models" 2>/dev/null)" || return 1
+  EXPECTED_MODEL_ID="$MODEL_ID" python3 -c '
+import json
+import os
+import sys
+
+payload = json.load(sys.stdin)
+expected = os.environ["EXPECTED_MODEL_ID"]
+models = payload.get("data", [])
+raise SystemExit(0 if any(model.get("id") == expected for model in models) else 1)
+' <<<"$response"
+}
+
+port_is_listening() {
+  /usr/sbin/lsof -nP -iTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | grep -q .
+}
+
+release_start_lock() {
+  if [[ "$owns_lock" -eq 1 ]]; then
+    rm -f "$LOCK_PID_FILE"
+    rmdir "$LOCK_DIR" 2>/dev/null || true
+    owns_lock=0
+  fi
+}
+
+cleanup_on_exit() {
+  local status=$?
+  trap - EXIT INT TERM
+  release_start_lock
+  exit "$status"
+}
+
+wait_for_server() {
+  local pid="$1"
+  local attempt
+
+  for attempt in {1..600}; do
+    if server_ready; then
+      return 0
+    fi
+
+    if [[ -n "$pid" ]] && ! kill -0 "$pid" 2>/dev/null; then
+      echo "MTPLX exited before becoming ready. See $LOG_FILE" >&2
+      tail -40 "$LOG_FILE" >&2 || true
+      return 1
+    fi
+
+    sleep 1
+  done
+
+  echo "MTPLX did not become ready within 10 minutes. See $LOG_FILE" >&2
+  return 1
+}
+
+acquire_start_lock() {
+  local attempt
+  local owner_pid
+
+  for attempt in {1..30}; do
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+      owns_lock=1
+      printf '%s\n' "$$" >"$LOCK_PID_FILE"
+      trap cleanup_on_exit EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      return 0
+    fi
+
+    owner_pid=""
+    if [[ -r "$LOCK_PID_FILE" ]]; then
+      read -r owner_pid <"$LOCK_PID_FILE" || owner_pid=""
+    fi
+
+    if [[ "$owner_pid" =~ ^[0-9]+$ ]] && kill -0 "$owner_pid" 2>/dev/null; then
+      wait_for_server "$owner_pid"
+      return 2
+    fi
+
+    if [[ -n "$owner_pid" ]]; then
+      rm -f "$LOCK_PID_FILE"
+      rmdir "$LOCK_DIR" 2>/dev/null || true
+    else
+      sleep 1
+    fi
+  done
+
+  echo "Could not acquire MTPLX startup lock: $LOCK_DIR" >&2
+  return 1
+}
+
+start_server() {
+  local mtplx_pid
+  local lock_status
+
+  mkdir -p "$STATE_DIR"
+
+  acquire_start_lock || {
+    lock_status=$?
+    if [[ "$lock_status" -eq 2 ]]; then
+      return 0
+    fi
+    return "$lock_status"
+  }
+
+  if server_ready; then
+    release_start_lock
+    trap - EXIT INT TERM
+    return 0
+  fi
+
+  if port_is_listening; then
+    echo "Port $PORT is occupied by a service that is not serving $MODEL_ID." >&2
+    exit 1
+  fi
+
+  nohup mtplx serve \
+    --model "$MODEL_REPO" \
+    --model-id "$MODEL_ID" \
+    --host "$HOST" \
+    --port "$PORT" \
+    --no-auth \
+    --profile turbo \
+    --batching-preset agent \
+    --reasoning-effort medium \
+    >"$LOG_FILE" 2>&1 </dev/null &
+  mtplx_pid=$!
+  printf '%s\n' "$mtplx_pid" >"$PID_FILE"
+
+  wait_for_server "$mtplx_pid"
+  release_start_lock
+  trap - EXIT INT TERM
+}
+
+require_command curl
+require_command mtplx
+require_command pi
+require_command python3
+
+if ! server_ready; then
+  start_server
+fi
+
+export PI_TELEMETRY=0
+exec pi \
+  --provider mtplx-local \
+  --model "$MODEL_ID" \
+  "$@"
