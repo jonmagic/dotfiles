@@ -16,7 +16,7 @@ LOG="/tmp/brain-commit.log"
 TIMEOUT=900
 BRAIN_DIR="${BRAIN_DIR:-$HOME/Brain}"
 EXPECTED_MANIFEST=""
-VERIFY_SYNC="$HOME/.copilot/skills/brain/scripts/verify-sync.sh"
+VERIFY_SYNC="$HOME/.agents/skills/brain/scripts/verify-sync.sh"
 
 cleanup() {
   rm -f "$LOCK"
@@ -200,7 +200,7 @@ run_copilot \
     --disable-mcp-server Sentry \
     --allow-all-tools \
     --add-dir ~/Brain \
-    --add-dir ~/.copilot/skills/brain \
+    --add-dir ~/.agents/skills/brain \
     -p "commit brain" >> "$LOG" 2>&1 &
 copilot_pid=$!
 
