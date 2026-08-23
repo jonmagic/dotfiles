@@ -106,7 +106,7 @@ fi
 if executable_exists "$HOME/.dotfiles/bin/copilot"; then
   alias copilot="$HOME/.dotfiles/bin/copilot"
   alias c="$HOME/.dotfiles/bin/copilot --allow-all"
-  alias m='ZANSHIN_ROLE=manager ZANSHIN_LABEL=Manager c --model gemini-3.7-flash'
+  alias z='ZANSHIN_ROLE=manager ZANSHIN_LABEL=Zanshin c --model gemini-3.7-flash'
 fi
 
 # Local Pi coding agent backed by Qwen 3.8 27B through MTPLX.
