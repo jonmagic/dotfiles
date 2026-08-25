@@ -3,8 +3,14 @@
 set -euo pipefail
 
 LLM_BIN="${LLM_BIN:-/opt/homebrew/bin/llm}"
-DEFAULT_COPILOT_MODEL="${LLM_COPILOT_MODEL:-github_copilot/claude-opus-4.6}"
-COPILOT_PLUGIN_SPEC="llm-github-copilot==0.3.1"
+DEFAULT_COPILOT_MODEL="${LLM_COPILOT_MODEL:-github_copilot/gpt-5.6-sol}"
+# Pinned to a commit past the 0.3.1 PyPI release: 0.3.1 only calls
+# /chat/completions, which GitHub Copilot rejects for Responses-only models
+# (e.g. gpt-5.6-sol/luna/terra, mai-code-*). This commit adds routing to
+# /responses based on each model's advertised supported_endpoints. Move back
+# to a versioned PyPI release once jmdaly/llm-github-copilot cuts one with
+# this fix (merged in PR #34).
+COPILOT_PLUGIN_SPEC="git+https://github.com/jmdaly/llm-github-copilot.git@e4a37e2c8d105a7a26dea06569ea369c5862b42d"
 
 if [[ ! -x "$LLM_BIN" ]]; then
   echo "Homebrew llm not found at $LLM_BIN" >&2
