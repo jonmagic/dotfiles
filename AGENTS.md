@@ -40,3 +40,9 @@ DOTFILES_HELP_DISABLE=1 bin/help --plain
   files.
 - Preserve unrelated user changes in the working tree.
 - Use concise conventional commit messages for code and documentation changes.
+- Always work on `main`. Do not create branches or worktrees for this
+  repository unless explicitly asked.
+- After completing and validating a requested change, commit and push it
+  immediately. Stage only the intended files, fetch and safely integrate
+  remote changes first if needed, and never force-push. If commit or push is
+  blocked, preserve the work and report the exact blocker.
