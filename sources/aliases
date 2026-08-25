@@ -18,13 +18,19 @@ fi
 # Archive meeting
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
   am() {
-    local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-github_copilot/claude-opus-4.6}"
+    local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-github_copilot/gpt-5.6-sol}"
+    local archive_meeting_reasoning_effort="${ARCHIVE_MEETING_REASONING_EFFORT:-}"
+    local archive_meeting_reasoning_args=()
+    if [ -n "$archive_meeting_reasoning_effort" ]; then
+      archive_meeting_reasoning_args=(--reasoning-effort "$archive_meeting_reasoning_effort")
+    fi
     ~/code/jonmagic/scripts/bin/archive-meeting \
       --brain-dir ~/Brain \
       --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md \
       --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md \
       --task-capture-prompt-path ~/code/jonmagic/prompts/summarize/transcript-my-tasks.md \
       --model "$archive_meeting_model" \
+      "${archive_meeting_reasoning_args[@]}" \
       "$@"
   }
 fi
@@ -85,11 +91,6 @@ if command_exists git && command_exists llm; then
 
     printf '%s\n' "$msg" | git commit -F -
   }
-fi
-
-# Prepare Pull Request
-if executable_exists "$HOME/code/jonmagic/scripts/bin/prepare-pull-request"; then
-  alias ppr='~/code/jonmagic/scripts/bin/prepare-pull-request --base-branch main --pr-body-prompt-path ~/code/jonmagic/prompts/generate/pull-request-body.md'
 fi
 
 # Flow
