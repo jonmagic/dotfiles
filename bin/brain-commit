@@ -77,6 +77,24 @@ fi
 echo $$ > "$LOCK"
 trap cleanup EXIT
 
+# Skip this cycle if an interactive session is mid-edit on Brain (see brain-guard).
+# The guard is a staleness marker, not a live-process lock, so it self-expires
+# and can never permanently block automation if a session forgets to release it.
+GUARD="/tmp/brain-commit.guard"
+GUARD_MAX_AGE=1800
+if [ -f "$GUARD" ]; then
+  guard_ts="$(sed -n '2p' "$GUARD" 2>/dev/null || true)"
+  guard_reason="$(sed -n '3p' "$GUARD" 2>/dev/null || true)"
+  now="$(date +%s)"
+  if [ -n "$guard_ts" ] && [ $((now - guard_ts)) -lt "$GUARD_MAX_AGE" ]; then
+    echo "$(date): skipping, brain-guard active: $guard_reason" >> "$LOG"
+    exit 0
+  else
+    echo "$(date): stale brain-guard found, ignoring and removing" >> "$LOG"
+    rm -f "$GUARD"
+  fi
+fi
+
 echo "$(date): starting brain commit" >> "$LOG"
 cd "$BRAIN_DIR" || exit 1
 
