@@ -22,8 +22,21 @@ VERIFY_SYNC="$HOME/.agents/skills/brain/scripts/verify-sync.sh"
 
 cleanup() {
   rm -f "$LOCK"
+  restore_guard_stash
   if [ -n "${EXPECTED_MANIFEST:-}" ] && [ -f "$EXPECTED_MANIFEST" ]; then
     rm -f "$EXPECTED_MANIFEST"
+  fi
+}
+
+restore_guard_stash() {
+  if [ -n "${GUARD_STASH_MSG:-}" ]; then
+    local ref
+    ref="$(cd "$BRAIN_DIR" && git stash list | grep -F "$GUARD_STASH_MSG" | head -1 | cut -d: -f1)"
+    if [ -n "$ref" ]; then
+      (cd "$BRAIN_DIR" && git stash pop --quiet "$ref") >> "$LOG" 2>&1 || \
+        echo "$(date): failed to restore guarded stash $ref, left in stash list" >> "$LOG"
+      GUARD_STASH_MSG=""
+    fi
   fi
 }
 
@@ -77,18 +90,32 @@ fi
 echo $$ > "$LOCK"
 trap cleanup EXIT
 
-# Skip this cycle if an interactive session is mid-edit on Brain (see brain-guard).
+# If an interactive session is mid-edit on specific paths (see brain-guard),
+# stash just those paths out of the way so everything else still commits and
+# pushes on the normal 5-minute cycle, then restore them untouched on exit.
 # The guard is a staleness marker, not a live-process lock, so it self-expires
 # and can never permanently block automation if a session forgets to release it.
 GUARD="/tmp/brain-commit.guard"
 GUARD_MAX_AGE=1800
+cd "$BRAIN_DIR" || exit 1
 if [ -f "$GUARD" ]; then
   guard_ts="$(sed -n '2p' "$GUARD" 2>/dev/null || true)"
   guard_reason="$(sed -n '3p' "$GUARD" 2>/dev/null || true)"
   now="$(date +%s)"
   if [ -n "$guard_ts" ] && [ $((now - guard_ts)) -lt "$GUARD_MAX_AGE" ]; then
-    echo "$(date): skipping, brain-guard active: $guard_reason" >> "$LOG"
-    exit 0
+    guard_paths=()
+    while IFS= read -r gp; do
+      [ -n "$gp" ] && guard_paths+=("$gp")
+    done < <(tail -n +4 "$GUARD")
+    if [ "${#guard_paths[@]}" -gt 0 ]; then
+      GUARD_STASH_MSG="brain-commit-guard-$$-$now"
+      if git stash push -u --quiet -m "$GUARD_STASH_MSG" -- "${guard_paths[@]}" 2>>"$LOG"; then
+        echo "$(date): stashed guarded paths (${guard_reason}): ${guard_paths[*]}" >> "$LOG"
+      else
+        echo "$(date): nothing to stash for guarded paths: ${guard_paths[*]}" >> "$LOG"
+        GUARD_STASH_MSG=""
+      fi
+    fi
   else
     echo "$(date): stale brain-guard found, ignoring and removing" >> "$LOG"
     rm -f "$GUARD"
@@ -96,7 +123,6 @@ if [ -f "$GUARD" ]; then
 fi
 
 echo "$(date): starting brain commit" >> "$LOG"
-cd "$BRAIN_DIR" || exit 1
 
 # Keep Copilot's shared home for auth and installed skills, but trim old daemon logs.
 find "$HOME/.copilot/logs" -maxdepth 1 -type f -name 'process-*.log' -mtime +7 -delete 2>/dev/null || true

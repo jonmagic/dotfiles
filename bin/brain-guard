@@ -1,29 +1,54 @@
 #!/bin/bash
 # Coordinates the 5-minute brain-commit launchd timer with interactive editing
-# sessions on the Brain repo. An agent doing a multi-file edit burst should
-# `acquire` a guard before editing and `release` it right after committing, so
-# brain-commit skips its cycle instead of racing a partial commit mid-edit.
+# sessions on the Brain repo, on a per-file basis. Acquire the guard on the
+# specific paths you're actively editing; brain-commit stashes just those
+# paths out of the way before committing everything else, then restores them
+# untouched. Other dirty files keep committing/pushing on the normal cycle.
 #
-# The guard is a plain staleness marker, not a live-process lock: brain-commit
-# ignores it once it is older than GUARD_MAX_AGE seconds, so a forgotten
+# The guard is a staleness marker, not a live-process lock: brain-commit
+# ignores/removes it once older than GUARD_MAX_AGE seconds, so a forgotten
 # release never blocks automation forever.
 set -euo pipefail
 
 GUARD="/tmp/brain-commit.guard"
 cmd="${1:-status}"
-reason="${2:-manual edit session}"
 
 case "$cmd" in
   acquire)
-    printf '%s\n%s\n%s\n' "$$" "$(date +%s)" "$reason" > "$GUARD"
-    echo "brain-guard acquired: $reason"
+    shift || true
+    reason="manual edit session"
+    paths=()
+    for arg in "$@"; do
+      if [ -e "$HOME/Brain/$arg" ] || [ -e "$arg" ]; then
+        paths+=("$arg")
+      else
+        reason="$arg"
+      fi
+    done
+    if [ "${#paths[@]}" -eq 0 ]; then
+      echo "usage: brain-guard acquire <path> [path...] [reason]" >&2
+      exit 1
+    fi
+    {
+      echo "$$"
+      date +%s
+      echo "$reason"
+      printf '%s\n' "${paths[@]}"
+    } > "$GUARD"
+    echo "brain-guard acquired for: ${paths[*]} ($reason)"
     ;;
   refresh)
     if [ -f "$GUARD" ]; then
       pid="$(sed -n '1p' "$GUARD")"
-      r="$(sed -n '3p' "$GUARD")"
-      printf '%s\n%s\n%s\n' "$pid" "$(date +%s)" "$r" > "$GUARD"
-      echo "brain-guard refreshed: $r"
+      reason="$(sed -n '3p' "$GUARD")"
+      paths="$(tail -n +4 "$GUARD")"
+      {
+        echo "$pid"
+        date +%s
+        echo "$reason"
+        printf '%s\n' "$paths"
+      } > "$GUARD"
+      echo "brain-guard refreshed: $reason"
     else
       echo "no active brain-guard to refresh" >&2
       exit 1
@@ -36,15 +61,17 @@ case "$cmd" in
   status)
     if [ -f "$GUARD" ]; then
       ts="$(sed -n '2p' "$GUARD")"
-      r="$(sed -n '3p' "$GUARD")"
+      reason="$(sed -n '3p' "$GUARD")"
       age=$(( $(date +%s) - ts ))
-      echo "brain-guard active (${age}s old): $r"
+      echo "brain-guard active (${age}s old): $reason"
+      echo "guarded paths:"
+      tail -n +4 "$GUARD" | sed 's/^/  /'
     else
       echo "no active brain-guard"
     fi
     ;;
   *)
-    echo "usage: brain-guard {acquire [reason]|refresh|release|status}" >&2
+    echo "usage: brain-guard {acquire <path>... [reason]|refresh|release|status}" >&2
     exit 1
     ;;
 esac
