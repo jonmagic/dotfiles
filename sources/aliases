@@ -106,8 +106,8 @@ fi
 # GitHub Copilot CLI wrapper with credentials from macOS Keychain.
 if executable_exists "$HOME/.dotfiles/bin/copilot"; then
   # Temporary pin until Copilot's cached-version sorting fix is released.
-  alias copilot="$HOME/.dotfiles/bin/copilot --prefer-version 1.0.81-11"
-  alias c="$HOME/.dotfiles/bin/copilot --allow-all --prefer-version 1.0.81-11"
+  alias copilot="$HOME/.dotfiles/bin/copilot --prefer-version 1.0.81-12"
+  alias c="$HOME/.dotfiles/bin/copilot --allow-all --prefer-version 1.0.81-12"
 fi
 
 # Zanshin attention dashboard
