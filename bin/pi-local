@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Run Pi with the on-demand local Qwen model and manage its MTPLX server.
 set -euo pipefail
 
 readonly MODEL_REPO="Youssofal/Qwen3.8-27B-MTPLX-Optimized-Speed"
@@ -11,8 +12,16 @@ readonly LOG_FILE="$STATE_DIR/mtplx.log"
 readonly PID_FILE="$STATE_DIR/mtplx.pid"
 readonly LOCK_DIR="$STATE_DIR/start.lock"
 readonly LOCK_PID_FILE="$LOCK_DIR/owner.pid"
+readonly SESSIONS_DIR="$STATE_DIR/sessions"
+readonly LIFECYCLE_LOCK_DIR="$STATE_DIR/lifecycle.lock"
+readonly LIFECYCLE_LOCK_PID_FILE="$LIFECYCLE_LOCK_DIR/owner.pid"
+readonly IDLE_TOKEN_FILE="$STATE_DIR/idle-shutdown-token"
+readonly IDLE_TIMEOUT_SECONDS="${PI_LOCAL_IDLE_TIMEOUT_SECONDS:-600}"
+readonly SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 
 owns_lock=0
+owns_lifecycle_lock=0
+session_file=""
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -41,6 +50,28 @@ port_is_listening() {
   /usr/sbin/lsof -nP -iTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | grep -q .
 }
 
+read_server_pid() {
+  local pid=""
+
+  if [[ -r "$PID_FILE" ]]; then
+    read -r pid <"$PID_FILE" || pid=""
+  fi
+
+  printf '%s\n' "$pid"
+}
+
+server_process_matches() {
+  local pid="$1"
+  local command=""
+
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  command="$(ps -p "$pid" -o command= 2>/dev/null)" || return 1
+  [[ "$command" == *"mtplx.server.openai"* &&
+    "$command" == *"--model-id $MODEL_ID"* &&
+    "$command" == *"--port $PORT"* ]]
+}
+
 release_start_lock() {
   if [[ "$owns_lock" -eq 1 ]]; then
     rm -f "$LOCK_PID_FILE"
@@ -51,8 +82,16 @@ release_start_lock() {
 
 cleanup_on_exit() {
   local status=$?
+
   trap - EXIT INT TERM
   release_start_lock
+  release_lifecycle_lock
+
+  if [[ -n "$session_file" ]]; then
+    unregister_session
+    schedule_idle_shutdown
+  fi
+
   exit "$status"
 }
 
@@ -86,9 +125,6 @@ acquire_start_lock() {
     if mkdir "$LOCK_DIR" 2>/dev/null; then
       owns_lock=1
       printf '%s\n' "$$" >"$LOCK_PID_FILE"
-      trap cleanup_on_exit EXIT
-      trap 'exit 130' INT
-      trap 'exit 143' TERM
       return 0
     fi
 
@@ -114,6 +150,179 @@ acquire_start_lock() {
   return 1
 }
 
+acquire_lifecycle_lock() {
+  local attempt
+  local owner_pid
+  local owner_command
+
+  for attempt in {1..400}; do
+    if mkdir "$LIFECYCLE_LOCK_DIR" 2>/dev/null; then
+      owns_lifecycle_lock=1
+      printf '%s\n' "$$" >"$LIFECYCLE_LOCK_PID_FILE"
+      return 0
+    fi
+
+    owner_pid=""
+    owner_command=""
+    if [[ -r "$LIFECYCLE_LOCK_PID_FILE" ]]; then
+      read -r owner_pid <"$LIFECYCLE_LOCK_PID_FILE" || owner_pid=""
+    fi
+
+    if [[ "$owner_pid" =~ ^[0-9]+$ ]]; then
+      owner_command="$(ps -p "$owner_pid" -o command= 2>/dev/null)" || owner_command=""
+    fi
+
+    if [[ "$owner_command" != *"$SCRIPT_PATH"* ]]; then
+      rm -f "$LIFECYCLE_LOCK_PID_FILE"
+      rmdir "$LIFECYCLE_LOCK_DIR" 2>/dev/null || true
+      continue
+    fi
+
+    sleep 0.1
+  done
+
+  echo "Could not acquire Pi lifecycle lock: $LIFECYCLE_LOCK_DIR" >&2
+  return 1
+}
+
+release_lifecycle_lock() {
+  if [[ "$owns_lifecycle_lock" -eq 1 ]]; then
+    rm -f "$LIFECYCLE_LOCK_PID_FILE"
+    rmdir "$LIFECYCLE_LOCK_DIR" 2>/dev/null || true
+    owns_lifecycle_lock=0
+  fi
+}
+
+session_process_matches() {
+  local pid="$1"
+  local command=""
+
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  command="$(ps -p "$pid" -o command= 2>/dev/null)" || return 1
+  [[ "$command" == *"$SCRIPT_PATH"* ]]
+}
+
+remove_stale_sessions() {
+  local file
+  local pid
+
+  shopt -s nullglob
+  for file in "$SESSIONS_DIR"/*; do
+    pid=""
+    read -r pid <"$file" || pid=""
+    if ! session_process_matches "$pid"; then
+      rm -f "$file"
+    fi
+  done
+  shopt -u nullglob
+}
+
+active_session_exists() {
+  local files
+
+  remove_stale_sessions
+  shopt -s nullglob
+  files=("$SESSIONS_DIR"/*)
+  shopt -u nullglob
+  [[ ${#files[@]} -gt 0 ]]
+}
+
+register_session() {
+  mkdir -p "$STATE_DIR" "$SESSIONS_DIR"
+  acquire_lifecycle_lock
+  remove_stale_sessions
+  rm -f "$IDLE_TOKEN_FILE"
+  session_file="$SESSIONS_DIR/$$"
+  printf '%s\n' "$$" >"$session_file"
+  release_lifecycle_lock
+}
+
+unregister_session() {
+  acquire_lifecycle_lock
+  rm -f "$session_file"
+  session_file=""
+  remove_stale_sessions
+  release_lifecycle_lock
+}
+
+schedule_idle_shutdown() {
+  local token
+
+  token="$(date +%s).$$.$RANDOM"
+  acquire_lifecycle_lock
+  printf '%s\n' "$token" >"$IDLE_TOKEN_FILE"
+  release_lifecycle_lock
+
+  nohup "$SCRIPT_PATH" --idle-shutdown "$token" "$IDLE_TIMEOUT_SECONDS" \
+    >>"$LOG_FILE" 2>&1 </dev/null &
+}
+
+stop_server() {
+  local pid
+  local attempt
+
+  pid="$(read_server_pid)"
+  if ! server_process_matches "$pid"; then
+    if server_ready; then
+      echo "Qwen is responding on $BASE_URL, but its recorded PID is missing or stale; refusing to stop an unverified process." >&2
+      return 1
+    fi
+
+    rm -f "$PID_FILE" "$IDLE_TOKEN_FILE"
+    echo "Qwen is not running."
+    return 0
+  fi
+
+  kill "$pid"
+  for attempt in {1..30}; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      rm -f "$PID_FILE" "$IDLE_TOKEN_FILE"
+      echo "Qwen stopped."
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "Qwen did not stop within 30 seconds (PID $pid)." >&2
+  return 1
+}
+
+idle_shutdown() {
+  local expected_token="$1"
+  local idle_seconds="$2"
+  local current_token=""
+
+  sleep "$idle_seconds"
+  acquire_lifecycle_lock
+
+  if [[ -r "$IDLE_TOKEN_FILE" ]]; then
+    read -r current_token <"$IDLE_TOKEN_FILE" || current_token=""
+  fi
+
+  if [[ "$current_token" != "$expected_token" ]] || active_session_exists; then
+    release_lifecycle_lock
+    return 0
+  fi
+
+  rm -f "$IDLE_TOKEN_FILE"
+  stop_server
+  release_lifecycle_lock
+}
+
+server_status() {
+  local pid
+
+  pid="$(read_server_pid)"
+  if server_process_matches "$pid" && server_ready; then
+    echo "Qwen is running (PID $pid)."
+    return 0
+  fi
+
+  echo "Qwen is not running."
+  return 1
+}
+
 start_server() {
   local mtplx_pid
   local lock_status
@@ -130,7 +339,6 @@ start_server() {
 
   if server_ready; then
     release_start_lock
-    trap - EXIT INT TERM
     return 0
   fi
 
@@ -154,20 +362,71 @@ start_server() {
 
   wait_for_server "$mtplx_pid"
   release_start_lock
-  trap - EXIT INT TERM
 }
+
+usage() {
+  cat <<EOF
+Usage:
+  pi-local [pi arguments...]
+  pi-local server {start|stop|status|log}
+
+The Qwen server starts on demand and stops $((IDLE_TIMEOUT_SECONDS / 60)) minutes
+after the last Pi session exits. Set PI_LOCAL_IDLE_TIMEOUT_SECONDS to override.
+EOF
+}
+
+if ! [[ "$IDLE_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]]; then
+  echo "PI_LOCAL_IDLE_TIMEOUT_SECONDS must be a non-negative integer." >&2
+  exit 2
+fi
+
+mkdir -p "$STATE_DIR"
+trap cleanup_on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if [[ "${1:-}" == "--idle-shutdown" ]]; then
+  [[ $# -eq 3 ]] || exit 2
+  idle_shutdown "$2" "$3"
+  exit 0
+fi
 
 require_command curl
 require_command mtplx
-require_command pi
 require_command python3
+
+if [[ "${1:-}" == "server" ]]; then
+  case "${2:-status}" in
+    start)
+      start_server
+      echo "Qwen started."
+      ;;
+    stop)
+      stop_server
+      ;;
+    status)
+      server_status
+      ;;
+    log)
+      tail -f "$LOG_FILE"
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+  exit 0
+fi
+
+require_command pi
+register_session
 
 if ! server_ready; then
   start_server
 fi
 
 export PI_TELEMETRY=0
-exec pi \
+pi \
   --provider mtplx-local \
   --model "$MODEL_ID" \
   "$@"
