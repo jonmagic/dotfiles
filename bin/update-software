@@ -425,11 +425,18 @@ done
 } 2>&1 | tee "$LOG"
 
 # Phase 2: Hand the captured output to Copilot for analysis and follow-ups.
-echo ""
-echo "==> Analyzing update results with Copilot..."
-echo ""
+analyze_update_results() {
+  local llm_wrapper="$HOME/.dotfiles/bin/llm"
+  local analysis_model="${UPDATE_SOFTWARE_ANALYSIS_MODEL:-github_copilot/claude-sonnet-4.5}"
 
-gh copilot -p "
+  if [[ ! -x "$llm_wrapper" ]]; then
+    echo "Copilot analysis wrapper not found at $llm_wrapper." >&2
+    return 127
+  fi
+
+  # Avoid creating a nested Copilot CLI session, which also loads lifecycle hooks.
+  {
+    cat <<'EOF'
 Here is the output from my software update script. Please:
 1. Summarize what was updated, what was already up to date, and what was skipped.
 2. Flag any errors, warnings, or deprecation notices that need attention.
@@ -451,18 +458,15 @@ Known intentional behavior:
   update-software --cleanup.
 
 Output:
-$(cat "$LOG")
-" --allow-tool shell --disable-builtin-mcps --no-ask-user --model claude-sonnet-4.5
+EOF
+    cat "$LOG"
+  } | "$llm_wrapper" --no-log --no-stream -m "$analysis_model"
+}
 
-# Clean up ephemeral sessions from session-store.db
-SESSION_DB="$HOME/.copilot/session-store.db"
-if [[ -f "$SESSION_DB" ]]; then
-  sqlite3 "$SESSION_DB" "
-    DELETE FROM search_index WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
-    DELETE FROM session_refs WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
-    DELETE FROM session_files WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
-    DELETE FROM checkpoints WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
-    DELETE FROM turns WHERE session_id IN (SELECT id FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output');
-    DELETE FROM sessions WHERE summary LIKE 'Here is the output from my software update%' OR summary = 'Summarize Update Script Output';
-  " 2>/dev/null
-fi
+echo ""
+echo "==> Analyzing update results with Copilot..."
+echo ""
+
+analysis_status=0
+analyze_update_results || analysis_status=$?
+exit "$analysis_status"
