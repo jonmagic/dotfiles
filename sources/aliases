@@ -105,14 +105,13 @@ fi
 
 # GitHub Copilot CLI wrapper with credentials from macOS Keychain.
 if executable_exists "$HOME/.dotfiles/bin/copilot"; then
-  # Temporary pin until Copilot's cached-version sorting fix is released.
-  alias copilot="$HOME/.dotfiles/bin/copilot --prefer-version 1.0.81-12"
+  alias copilot="$HOME/.dotfiles/bin/copilot"
   # Start Copilot in Brain when launched from the home directory.
   c() {
     if [[ "$PWD" == "$HOME" ]]; then
       cd "$HOME/Brain" || return
     fi
-    "$HOME/.dotfiles/bin/copilot" --allow-all --prefer-version 1.0.81-12 "$@"
+    "$HOME/.dotfiles/bin/copilot" --allow-all "$@"
   }
 fi
 
