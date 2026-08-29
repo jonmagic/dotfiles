@@ -395,6 +395,24 @@ ts_personal_ssh() {
   exec ssh "${ssh_options[@]}" "$@"
 }
 
+ts_personal_scp() {
+  local -a ssh_options=()
+
+  if [[ $# -lt 2 ]]; then
+    ts_die "Usage: tsp-scp <scp-args...> <source> <target>"
+  fi
+
+  ts_require_command scp
+  ts_start_personal
+
+  ssh_options=(-o "ProxyCommand=$TS_ORB_BIN -m $TS_PERSONAL_MACHINE nc %h %p")
+  if [[ -n "${SSH_AUTH_SOCK:-}" ]]; then
+    ssh_options+=(-o "IdentityAgent=$SSH_AUTH_SOCK")
+  fi
+
+  exec scp "${ssh_options[@]}" "$@"
+}
+
 ts_personal_socks() {
   local port="${1:-$TS_PERSONAL_SOCKS_PORT}"
 

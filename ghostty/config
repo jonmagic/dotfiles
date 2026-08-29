@@ -29,6 +29,15 @@ shell-integration-features = no-title
 # Allow remote tmux sessions to copy into the macOS clipboard via OSC 52.
 clipboard-write = allow
 
+# Always put selected terminal text on the macOS clipboard.
+copy-on-select = clipboard
+
+# Send a distinct Shift+Enter sequence so Copilot can insert newlines.
+keybind = shift+enter=csi:13;2u
+
+# Keep Shift+drag available for terminal selection even in mouse-aware TUIs.
+mouse-shift-capture = never
+
 # --- Mac-specific niceties ------------------------------------------
 
 macos-titlebar-style = tabs

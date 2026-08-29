@@ -10,6 +10,7 @@ if [[ -n "$CODESPACES" ]]; then
 fi
 
 if [[ $OSTYPE == darwin* ]]; then
+  add_to_path_if_exists "$HOME/.local/bin"
   add_to_path_if_exists "$HOME/.nodenv/shims"
   add_to_path_if_exists "$HOME/.bun/bin"
   add_to_path_if_exists "$HOME/.cache/lm-studio/bin"

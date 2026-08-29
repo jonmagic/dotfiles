@@ -88,6 +88,7 @@ script_override_description() {
     ts-stop) printf '%s\n' "Stop work Tailscale or the personal OrbStack tailnet" ;;
     tsp) printf '%s\n' "Start the personal OrbStack tailnet" ;;
     tsp-copy-id) printf '%s\n' "Install a macOS SSH public key through the personal OrbStack tailnet" ;;
+    tsp-scp) printf '%s\n' "Copy files through the personal OrbStack tailnet" ;;
     tsp-socks) printf '%s\n' "Start a SOCKS proxy through the personal OrbStack tailnet" ;;
     tsp-ssh) printf '%s\n' "SSH through the personal OrbStack tailnet" ;;
     tsw) printf '%s\n' "Start the work Tailscale profile" ;;
@@ -337,7 +338,7 @@ print_workflows() {
   print_workflow_section "AI and editing" c copilot llm ee
   print_workflow_section "Repo work" flow repo commit
   print_workflow_section "Meetings and brain" am
-  print_workflow_section "Remote machines" fixorb wasp
+  print_workflow_section "Remote machines" fixorb wasp wasp-put
   print_workflow_section "On-demand instructions" ollama
   printf '%s  Use help all for the full source inventory, including under-the-hood helpers.%s\n' "$DIM" "$RESET"
 }

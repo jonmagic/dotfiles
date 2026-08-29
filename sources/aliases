@@ -231,6 +231,46 @@ if command_exists ssh; then
   # SSH to wasp, using direct SSH unless work Tailscale needs the OrbStack proxy.
   alias wasp='_personal_tailnet_ssh wasp'
 
+  # Copy local files to wasp and print remote paths for Copilot prompts.
+  wasp-put() {
+    if [[ $# -eq 0 ]]; then
+      echo "Usage: wasp-put <file-or-dir>..." >&2
+      return 2
+    fi
+
+    local path
+    for path in "$@"; do
+      if [[ ! -e "$path" ]]; then
+        echo "wasp-put: no such file or directory: $path" >&2
+        return 1
+      fi
+    done
+
+    local remote_dir="${WASP_UPLOAD_DIR:-/tmp/jonmagic-copilot}"
+    local route
+    route="$(_personal_tailnet_ssh_route)" || return
+
+    if [[ "$route" == tsp ]]; then
+      command_exists tsp-scp || {
+        echo "tsp-scp not found on PATH." >&2
+        return 1
+      }
+      tsp-ssh wasp "mkdir -p ${(q)remote_dir}" || return
+      tsp-scp -r "$@" "wasp:${remote_dir}/" || return
+    else
+      command_exists scp || {
+        echo "scp not found on PATH." >&2
+        return 1
+      }
+      ssh wasp "mkdir -p ${(q)remote_dir}" || return
+      scp -r "$@" "wasp:${remote_dir}/" || return
+    fi
+
+    for path in "$@"; do
+      printf '%s\n' "${remote_dir}/${path:t}"
+    done
+  }
+
   _wasp_tmux_remote_command() {
     local session="$1"
 
@@ -245,6 +285,11 @@ tmux set-option -g status-keys vi
 tmux set-option -g mode-keys vi
 tmux set-option -g set-clipboard external
 tmux show-option -gqv terminal-features 2>/dev/null | grep -Fq '*:clipboard' || tmux set-option -gq -a terminal-features ',*:clipboard' 2>/dev/null || true
+tmux show-option -gqv terminal-features 2>/dev/null | grep -Fq '*:extkeys' || tmux set-option -gq -a terminal-features ',*:extkeys' 2>/dev/null || true
+tmux set-option -gq extended-keys on 2>/dev/null || true
+tmux set-option -gq extended-keys-format csi-u 2>/dev/null || true
+tmux bind-key -n S-Enter send-keys Escape "[13;2u" 2>/dev/null || true
+tmux bind-key -T copy-mode-vi y send-keys -X copy-selection-and-cancel 2>/dev/null || true
 tmux has-session -t ${session} 2>/dev/null || tmux new-session -d -s ${session} "env DOTFILES_FULL_SSH=1 DOTFILES_HELP_DISABLE=1 COLORTERM=truecolor zsh -l"
 tmux set-option -t ${session} status off
 tmux attach-session -t ${session}
