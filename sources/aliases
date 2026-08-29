@@ -103,15 +103,37 @@ if command_exists git && command_exists llm; then
   alias gbb='git for-each-ref --sort=-committerdate --format="%(refname:short) - %(committerdate:short) - %(authorname) - %(subject)" refs/heads/ | llm "sort newest to oldest and format as a markdown table"'
 fi
 
-# GitHub Copilot CLI wrapper with credentials from macOS Keychain.
+_prepare_coding_agent_workdir() {
+  if [[ "$PWD" == "$HOME" ]]; then
+    builtin cd -- "$HOME/Brain" || return
+  fi
+}
+
 if executable_exists "$HOME/.dotfiles/bin/copilot"; then
-  alias copilot="$HOME/.dotfiles/bin/copilot"
-  # Start Copilot in Brain when launched from the home directory.
+  # Launch GitHub Copilot CLI; starts in Brain when launched from home.
+  copilot() {
+    _prepare_coding_agent_workdir || return
+    "$HOME/.dotfiles/bin/copilot" "$@"
+  }
+
+  # Launch GitHub Copilot CLI with all permissions; starts in Brain when launched from home.
   c() {
-    if [[ "$PWD" == "$HOME" ]]; then
-      cd "$HOME/Brain" || return
-    fi
+    _prepare_coding_agent_workdir || return
     "$HOME/.dotfiles/bin/copilot" --allow-all "$@"
+  }
+fi
+
+if executable_exists "$HOME/.local/bin/claude"; then
+  # Launch Claude Code without permission prompts; starts in Brain when launched from home.
+  claude() {
+    _prepare_coding_agent_workdir || return
+    "$HOME/.local/bin/claude" --dangerously-skip-permissions "$@"
+  }
+
+  # Launch Claude Code without permission prompts; starts in Brain when launched from home.
+  cc() {
+    _prepare_coding_agent_workdir || return
+    "$HOME/.local/bin/claude" --dangerously-skip-permissions "$@"
   }
 fi
 
@@ -122,7 +144,10 @@ fi
 
 # Local Pi coding agent backed by Qwen 3.8 27B through MTPLX.
 if executable_exists "$HOME/.dotfiles/bin/pi-local"; then
-  alias p="$HOME/.dotfiles/bin/pi-local"
+  p() {
+    _prepare_coding_agent_workdir || return
+    "$HOME/.dotfiles/bin/pi-local" "$@"
+  }
 fi
 
 # Copilot session finder
