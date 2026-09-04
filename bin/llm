@@ -106,7 +106,10 @@ prompt_invocation() {
 }
 
 install_copilot_plugin() {
-  "$LLM_BIN" install --upgrade "$COPILOT_PLUGIN_SPEC"
+  if copilot_plugin_installed; then
+    "$LLM_BIN" uninstall --yes llm-github-copilot
+  fi
+  "$LLM_BIN" install "$COPILOT_PLUGIN_SPEC"
 }
 
 copilot_plugin_installed() {
@@ -160,6 +163,16 @@ if [[ "${1:-}" == "setup-copilot" ]]; then
     exit 2
   fi
   setup_copilot
+  exit $?
+fi
+
+if [[ "${1:-}" == "upgrade-copilot-plugin" ]]; then
+  shift
+  if [[ $# -gt 0 ]]; then
+    echo "Usage: llm upgrade-copilot-plugin" >&2
+    exit 2
+  fi
+  install_copilot_plugin
   exit $?
 fi
 

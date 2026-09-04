@@ -33,7 +33,7 @@ Safe mode updates:
   - global npm packages
   - third-party and unclassified Homebrew formulae
   - Homebrew casks
-  - llm GitHub Copilot plugin from PyPI
+  - pinned llm GitHub Copilot plugin
 
 Options:
   --safe        Run the default safer update pass
@@ -401,11 +401,11 @@ done
   }
 
   # 7. llm plugins
-  if command -v llm &>/dev/null; then
-    llm_bin="$(command -v llm)"
-    deferred_step "Upgrading llm GitHub Copilot plugin" "PyPI plugin updates are deferred by the safe default" "$llm_bin" install --upgrade llm-github-copilot
+  llm_wrapper="$HOME/.dotfiles/bin/llm"
+  if [[ -x "$llm_wrapper" ]]; then
+    deferred_step "Upgrading llm GitHub Copilot plugin" "Plugin updates are deferred by the safe default" "$llm_wrapper" upgrade-copilot-plugin
   else
-    skip_step "Upgrading llm GitHub Copilot plugin" "llm not installed"
+    skip_step "Upgrading llm GitHub Copilot plugin" "Copilot llm wrapper not installed"
   fi
 
   # 8. Mac App Store
@@ -427,7 +427,7 @@ done
 # Phase 2: Hand the captured output to Copilot for analysis and follow-ups.
 analyze_update_results() {
   local llm_wrapper="$HOME/.dotfiles/bin/llm"
-  local analysis_model="${UPDATE_SOFTWARE_ANALYSIS_MODEL:-github_copilot/claude-sonnet-4.5}"
+  local analysis_model="${UPDATE_SOFTWARE_ANALYSIS_MODEL:-${LLM_COPILOT_MODEL:-github_copilot/gpt-5.6-sol}}"
 
   if [[ ! -x "$llm_wrapper" ]]; then
     echo "Copilot analysis wrapper not found at $llm_wrapper." >&2
