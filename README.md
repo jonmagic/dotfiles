@@ -9,7 +9,7 @@ bash -c "`curl -fsSL https://raw.githubusercontent.com/jonmagic/dotfiles/main/re
 
 ## Terminal help
 
-Opening a new local interactive terminal prints a workflow-focused command guide sourced from:
+The first local interactive terminal opened each day prints a workflow-focused command guide sourced from:
 
 - `sources/aliases`
 - `sources/functions.zsh`

@@ -12,8 +12,13 @@ safe_source() {
 safe_source "$HOME/.local/bin/env"
 
 if [[ $OSTYPE = darwin* ]]; then
-  if [[ $CPUTYPE -eq arm64 ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
+  if [[ $CPUTYPE == arm64 ]]; then
+    export HOMEBREW_PREFIX="/opt/homebrew"
+    export HOMEBREW_CELLAR="/opt/homebrew/Cellar"
+    export HOMEBREW_REPOSITORY="/opt/homebrew"
+    export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+    [[ -z "${MANPATH-}" ]] || export MANPATH=":${MANPATH#:}"
+    export INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}"
   else
     echo "brew not installed in intel arch"
   fi
@@ -26,21 +31,42 @@ load_full_config() {
   safe_source "$HOME/.dotfiles/sources/functions.zsh"
   safe_source "$HOME/.dotfiles/sources/env_variables"
   safe_source "$HOME/.dotfiles/sources/env_secrets"
+
+  # Register completion directories before Antigen initializes its cache.
+  fpath=("$HOME/.docker/completions" "$HOME/.orbstack/shell/completions/zsh" $fpath)
   safe_source "$HOME/.dotfiles/sources/terminal"
   safe_source "$HOME/.dotfiles/sources/ghostty-colors.zsh"
-  # safe_source $HOME/.config/op/plugins.sh
-  # safe_source $HOME/.cargo/env
 
-  # The following lines have been added by Docker Desktop to enable Docker CLI completions.
-  fpath=(/Users/jonmagic/.docker/completions $fpath)
-  autoload -Uz compinit
-  compinit
-  # End of Docker CLI completions
+  # Antigen schedules a full compinit for the first prompt. Replace it with one
+  # cached initialization so completions are ready without scanning twice.
+  autoload -Uz add-zsh-hook compinit
+  add-zsh-hook -D precmd _antigen_compinit 2>/dev/null
+
+  local compdump="$HOME/.zcompdump"
+  if [[ -s "$compdump" ]]; then
+    compinit -C -d "$compdump"
+  else
+    compinit -d "$compdump"
+  fi
+
+  if [[ -s "$compdump" && ( ! -s "$compdump.zwc" || "$compdump" -nt "$compdump.zwc" ) ]]; then
+    zcompile "$compdump"
+  fi
 
   if [[ -o interactive ]] && [[ -t 1 ]] && [[ -z "${DOTFILES_HELP_DISABLE:-}" ]] && [[ -z "${DOTFILES_HELP_SHOWN:-}" ]]; then
     export DOTFILES_HELP_SHOWN=1
-    if [[ -x "$HOME/.dotfiles/bin/help" ]]; then
-      "$HOME/.dotfiles/bin/help" --startup
+    local help_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+    local help_stamp="$help_cache_dir/help-last-shown"
+    local help_today
+
+    zmodload zsh/datetime
+    strftime -s help_today "%Y-%m-%d" "$EPOCHSECONDS"
+
+    if [[ ! -s "$help_stamp" || "$(<"$help_stamp")" != "$help_today" ]]; then
+      if [[ -x "$HOME/.dotfiles/bin/help" ]] && "$HOME/.dotfiles/bin/help" --startup; then
+        mkdir -p "$help_cache_dir"
+        print -r -- "$help_today" >| "$help_stamp"
+      fi
     fi
   fi
 }
