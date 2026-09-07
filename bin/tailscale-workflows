@@ -22,7 +22,7 @@ TS_PERSONAL_OPERATOR="${TS_PERSONAL_OPERATOR:-${USER:-}}"
 TS_PERSONAL_READY_TIMEOUT="${TS_PERSONAL_READY_TIMEOUT:-45}"
 TS_PERSONAL_SOCKS_PORT="${TS_PERSONAL_SOCKS_PORT:-1080}"
 TS_PERSONAL_SSH_COPY_IDENTITY="${TS_PERSONAL_SSH_COPY_IDENTITY:-$HOME/.ssh/jonmagic_github.pub}"
-TS_PERSONAL_UP_TIMEOUT="${TS_PERSONAL_UP_TIMEOUT:-30s}"
+TS_PERSONAL_UP_TIMEOUT="${TS_PERSONAL_UP_TIMEOUT:-2m}"
 
 ts_require_command() {
   local command_name="$1"
@@ -287,7 +287,7 @@ ts_personal_flags() {
 
 ts_up_personal() {
   local -a flags=()
-  local output=""
+  local status_output=""
   local status=0
 
   while IFS= read -r flag; do
@@ -297,16 +297,15 @@ ts_up_personal() {
   ts_log "Bringing personal Tailscale up inside $TS_PERSONAL_MACHINE..."
 
   set +e
-  output="$(ts_personal_run sudo tailscale up "${flags[@]}" "$@" 2>&1)"
+  ts_personal_run sudo tailscale up "${flags[@]}" "$@"
   status=$?
   set -e
 
-  if [[ -n "$output" ]]; then
-    printf '%s\n' "$output"
-  fi
-
   if (( status != 0 )); then
-    if [[ "$output" == *"login.tailscale.com/a/"* ]]; then
+    status_output="$(ts_personal_status || true)"
+
+    if [[ "$status_output" == *"login.tailscale.com/a/"* ]]; then
+      printf '%s\n' "$status_output"
       ts_die "Complete the Tailscale login above, then run tsp again."
     fi
 
