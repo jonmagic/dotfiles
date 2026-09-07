@@ -52,9 +52,6 @@
 [credential "https://dev.azure.com"]
 	helper = /usr/local/share/gcm-core/git-credential-manager
 	useHttpPath = true
-[safe]
-	directory = /Users/jonmagic/OrbStack/docker/containers/nice_cerf/workspaces/github
-	directory = /app
 [credential "https://github.com"]
 	helper = 
 	helper = !/opt/homebrew/bin/gh auth git-credential

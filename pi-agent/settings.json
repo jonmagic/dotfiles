@@ -17,5 +17,7 @@
     "enabled": true,
     "reserveTokens": 32768,
     "keepRecentTokens": 20000
-  }
+  },
+  "lastChangelogVersion": "0.84.4",
+  "theme": "dark"
 }
