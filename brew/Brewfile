@@ -48,7 +48,7 @@ brew "maven"
 brew "mise"
 brew "mtr"
 brew "mysql-client"
-brew "mysql@8.0", restart_service: :changed
+brew "mysql@8.4", link: true, restart_service: :changed
 brew "ncurses"
 brew "nmap"
 brew "node-build"
