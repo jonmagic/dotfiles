@@ -28,7 +28,6 @@ if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
       --brain-dir ~/Brain \
       --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md \
       --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md \
-      --task-capture-prompt-path ~/code/jonmagic/prompts/summarize/transcript-my-tasks.md \
       --model "$archive_meeting_model" \
       "${archive_meeting_reasoning_args[@]}" \
       "$@"
