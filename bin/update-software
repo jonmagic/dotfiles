@@ -17,12 +17,13 @@ usage() {
 Usage: update-software [--all] [--cleanup] [--no-mas] [--no-mise]
 
 Without flags, runs safer defaults:
-  - updates Copilot CLI, gh extensions, Homebrew core formulae, mise, and Mac App Store apps
+  - updates Copilot CLI, Herdr preview, gh extensions, Homebrew core formulae, mise, and Mac App Store apps
   - reports but defers broad non-Copilot plugin/package/cask updates
   - never runs destructive Brewfile cleanup
 
 Safe mode updates:
   - Copilot CLI prerelease
+  - Herdr preview
   - gh extensions
   - Homebrew core formulae
   - mise-managed runtimes/tools
@@ -290,7 +291,14 @@ done
     skip_step "Upgrading mise packages" "mise not installed"
   fi
 
-  # 5. Homebrew
+  # 5. Herdr preview (standalone install managed by Herdr's official updater)
+  if command -v herdr &>/dev/null; then
+    run_step "Upgrading Herdr preview" herdr channel set preview
+  else
+    skip_step "Upgrading Herdr preview" "Herdr not installed"
+  fi
+
+  # 6. Homebrew
   if command -v brew &>/dev/null; then
     run_step "Upgrading homebrew" upgrade_homebrew
   else
@@ -494,10 +502,13 @@ Known intentional behavior:
   to a different Apple Account, so the script intentionally skips it.
 - Copilot CLI prerelease updates are an accepted-risk fast lane and should stay
   automatic.
+- Herdr preview updates are an accepted-risk fast lane and should stay
+  automatic. The standalone install is required because Homebrew and mise do
+  not expose Herdr's preview channel.
 - Safe mode is the default. It updates Copilot CLI, gh extensions,
-  Homebrew core formulae, mise, and Mac App Store apps, while deferring broad
-  non-Copilot plugin, package, third-party Homebrew, unclassified Homebrew,
-  and cask updates.
+  Herdr preview, Homebrew core formulae, mise, and Mac App Store apps, while
+  deferring broad non-Copilot plugin, package, third-party Homebrew,
+  unclassified Homebrew, and cask updates.
 - Deferred safe-mode lanes are not failures. Suggest update-software --all only
   when the user intentionally wants the broader update pass.
 - Brewfile cleanup is destructive and intentionally opt-in with
