@@ -28,6 +28,7 @@ Safe mode updates:
   - Homebrew core formulae
   - mise-managed runtimes/tools
   - Mac App Store apps, except known skipped app ids
+  - restores the pinned llm GitHub Copilot plugin when Homebrew removes it
 
 --all additionally updates:
   - Antigen plugins
@@ -455,7 +456,11 @@ done
   fi
 
   if [[ -x "$llm_wrapper" && -n "$llm_bin" ]]; then
-    deferred_step "Upgrading llm GitHub Copilot plugin" "Plugin updates are deferred by the safe default" env LLM_BIN="$llm_bin" "$llm_wrapper" upgrade-copilot-plugin
+    if all_updates_enabled; then
+      run_step "Upgrading llm GitHub Copilot plugin" env LLM_BIN="$llm_bin" "$llm_wrapper" upgrade-copilot-plugin
+    else
+      run_step "Ensuring llm GitHub Copilot plugin is installed" env LLM_BIN="$llm_bin" "$llm_wrapper" ensure-copilot-plugin
+    fi
   elif [[ ! -x "$llm_wrapper" ]]; then
     skip_step "Upgrading llm GitHub Copilot plugin" "Copilot llm wrapper not installed"
   else

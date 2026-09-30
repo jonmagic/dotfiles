@@ -112,6 +112,12 @@ install_copilot_plugin() {
   "$LLM_BIN" install "$COPILOT_PLUGIN_SPEC"
 }
 
+ensure_copilot_plugin() {
+  if ! copilot_plugin_installed; then
+    "$LLM_BIN" install "$COPILOT_PLUGIN_SPEC"
+  fi
+}
+
 copilot_plugin_installed() {
   "$LLM_BIN" plugins 2>/dev/null | grep -Fq '"name": "llm-github-copilot"'
 }
@@ -173,6 +179,16 @@ if [[ "${1:-}" == "upgrade-copilot-plugin" ]]; then
     exit 2
   fi
   install_copilot_plugin
+  exit $?
+fi
+
+if [[ "${1:-}" == "ensure-copilot-plugin" ]]; then
+  shift
+  if [[ $# -gt 0 ]]; then
+    echo "Usage: llm ensure-copilot-plugin" >&2
+    exit 2
+  fi
+  ensure_copilot_plugin
   exit $?
 fi
 
