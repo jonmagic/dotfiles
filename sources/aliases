@@ -136,11 +136,6 @@ if executable_exists "$HOME/.local/bin/claude"; then
   }
 fi
 
-# Zanshin attention dashboard
-if executable_exists "$HOME/code/jonmagic/zanshin/script/zanshin-dashboard"; then
-  alias z="$HOME/code/jonmagic/zanshin/script/zanshin-dashboard"
-fi
-
 # Local Pi coding agent backed by Qwen 3.8 27B through MTPLX.
 if executable_exists "$HOME/.dotfiles/bin/pi-local"; then
   p() {
