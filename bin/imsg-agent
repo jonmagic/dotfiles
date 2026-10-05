@@ -7,5 +7,14 @@ if ! command -v imsg >/dev/null 2>&1; then
   exit 127
 fi
 
+case "${1:-}" in
+  ""|--help|-h|--version|chats|stats|group|history|watch|status|completions|nickname)
+    ;;
+  *)
+    echo "imsg-agent: command '$1' is not allowed by the read-only wrapper" >&2
+    exit 64
+    ;;
+esac
+
 export SSH_CONNECTION="${SSH_CONNECTION:-127.0.0.1 0 127.0.0.1 0}"
 exec imsg "$@"
