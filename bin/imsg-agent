@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Run imsg with its read-only AddressBook fallback for agent hosts that cannot receive Contacts permission.
+set -euo pipefail
+
+if ! command -v imsg >/dev/null 2>&1; then
+  echo "imsg-agent: imsg is not installed" >&2
+  exit 127
+fi
+
+export SSH_CONNECTION="${SSH_CONNECTION:-127.0.0.1 0 127.0.0.1 0}"
+exec imsg "$@"
