@@ -19,7 +19,7 @@ Run `help` at any time to show the guide again, `help all` for the full implemen
 
 ## Scheduled note synchronization
 
-`com.jonmagic.brain-commit` runs `bin/brain-commit` every five minutes. It preserves Copilot session directories and indexed conversation history, and writes diagnostics to `~/Library/Logs/brain-commit.log`. After changing its LaunchAgent configuration, reload the job with `launchctl bootout gui/$(id -u)/com.jonmagic.brain-commit` followed by `launchctl bootstrap gui/$(id -u) ~/.dotfiles/bin/com.jonmagic.brain-commit.plist`.
+`com.jonmagic.brain-commit` supervises `bin/brain-commit --watch`, which waits five minutes between completed sync attempts rather than relying on deferrable launchd interval events. Failed attempts are logged and retried. It preserves Copilot session directories and indexed conversation history, and writes diagnostics to `~/Library/Logs/brain-commit.log`. After changing its LaunchAgent configuration, reload the job with `launchctl bootout gui/$(id -u)/com.jonmagic.brain-commit` followed by `launchctl bootstrap gui/$(id -u) ~/.dotfiles/bin/com.jonmagic.brain-commit.plist` and `launchctl kickstart gui/$(id -u)/com.jonmagic.brain-commit`. To pause synchronization, boot out the job; killing its process alone causes launchd to restart it.
 
 ## Copilot CLI credentials
 

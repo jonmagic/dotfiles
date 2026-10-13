@@ -9,6 +9,17 @@ export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 export GIT_TERMINAL_PROMPT=0
 LOG="$HOME/Library/Logs/brain-commit.log"
 mkdir -p "$(dirname "$LOG")"
+if [ "${1:-}" = "--watch" ]; then
+  while :; do
+    if "$0"; then
+      :
+    else
+      status=$?
+      echo "$(date): sync run failed with status $status; retrying after 300 seconds" >> "$LOG"
+    fi
+    sleep 300
+  done
+fi
 ssh-add --apple-use-keychain ~/.ssh/jonmagic_github 2>/dev/null || true
 COPILOT="$(command -v copilot || true)"
 if [ -z "$COPILOT" ]; then
