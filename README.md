@@ -17,6 +17,10 @@ The first local interactive terminal opened each day prints a workflow-focused c
 
 Run `help` at any time to show the guide again, `help all` for the full implementation inventory, `help <name>` for one command, or `help ollama` for on-demand Ollama service instructions.
 
+## Scheduled note synchronization
+
+`com.jonmagic.brain-commit` runs `bin/brain-commit` every five minutes. It preserves Copilot session directories and indexed conversation history, and writes diagnostics to `~/Library/Logs/brain-commit.log`. After changing its LaunchAgent configuration, reload the job with `launchctl bootout gui/$(id -u)/com.jonmagic.brain-commit` followed by `launchctl bootstrap gui/$(id -u) ~/.dotfiles/bin/com.jonmagic.brain-commit.plist`.
+
 ## Copilot CLI credentials
 
 `copilot` and `c` run through `bin/copilot`. On macOS, the wrapper first looks for a machine-local manifest at `${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/copilot-keychain-credentials`, then falls back to the repository manifest at `sources/copilot-keychain-credentials`. It passes declared credentials to the launched Copilot process through environment variables. The manifest is non-secret and uses this format:

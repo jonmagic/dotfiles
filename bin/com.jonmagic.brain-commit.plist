@@ -13,8 +13,8 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>StandardOutPath</key>
-	<string>/tmp/brain-commit.log</string>
+	<string>/Users/jonmagic/Library/Logs/brain-commit.log</string>
 	<key>StandardErrorPath</key>
-	<string>/tmp/brain-commit.log</string>
+	<string>/Users/jonmagic/Library/Logs/brain-commit.log</string>
 </dict>
 </plist>
