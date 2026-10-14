@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Restart iCloud and Voice Memos sync services when recordings stop appearing.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: fix-voice-memos-sync
+
+Restarts the current user's iCloud and Voice Memos sync services, reopens
+Voice Memos, and verifies that both services are running. Do not run this
+command while actively recording a memo.
+EOF
+}
+
+case "${1:-}" in
+  "")
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  echo "fix-voice-memos-sync only supports macOS." >&2
+  exit 1
+fi
+
+app_path="/System/Applications/VoiceMemos.app"
+user_domain="gui/$(id -u)"
+cloudd_service="$user_domain/com.apple.cloudd"
+voicememod_service="$user_domain/com.apple.voicememod"
+
+if [[ ! -d "$app_path" ]]; then
+  echo "Voice Memos app not found at $app_path." >&2
+  exit 1
+fi
+
+service_pid() {
+  launchctl print "$1" 2>/dev/null | awk -F ' = ' '/^[[:space:]]*pid = / { print $2; exit }'
+}
+
+wait_for_service() {
+  local service="$1"
+  local deadline=$((SECONDS + 15))
+
+  while (( SECONDS < deadline )); do
+    if [[ -n "$(service_pid "$service")" ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  return 1
+}
+
+terminate_pid() {
+  local pid="$1"
+  local name="$2"
+
+  if [[ -n "$pid" ]]; then
+    echo "Stopping $name (PID $pid)..."
+    kill "$pid"
+  fi
+}
+
+while IFS= read -r app_pid; do
+  terminate_pid "$app_pid" "Voice Memos"
+done < <(pgrep -U "$(id -u)" -x VoiceMemos || true)
+terminate_pid "$(service_pid "$voicememod_service")" "Voice Memos sync"
+terminate_pid "$(service_pid "$cloudd_service")" "iCloud sync"
+
+sleep 2
+
+echo "Reopening Voice Memos..."
+open "$app_path"
+
+for service in "$cloudd_service" "$voicememod_service"; do
+  if ! wait_for_service "$service"; then
+    echo "$service did not restart within 15 seconds." >&2
+    exit 1
+  fi
+done
+
+for service in "$cloudd_service" "$voicememod_service"; do
+  state="$(launchctl print "$service" 2>/dev/null | awk -F ' = ' '/^[[:space:]]*state = / { print $2; exit }')"
+  if [[ "$state" != "running" ]]; then
+    echo "$service did not report a running state." >&2
+    exit 1
+  fi
+done
+
+echo "Voice Memos sync services restarted successfully."
