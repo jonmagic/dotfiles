@@ -84,6 +84,7 @@ done
     "$@" || step_status=$?
     if (( step_status != 0 )); then
       echo "Step failed with exit code $step_status."
+      update_status=1
     fi
     echo ""
     return 0
@@ -151,11 +152,14 @@ done
     local outdated_formulae=""
     local formula=""
     local tap=""
+    local pinned_formulae_raw=""
+    local upgrade_status=0
+    local -a pinned_formulae=()
     local -a core_formulae=()
     local -a third_party_formulae=()
     local -a unclassified_formulae=()
 
-    outdated_formulae="$(brew outdated --formula)"
+    outdated_formulae="$(brew outdated --formula)" || return $?
     if [[ -z "${outdated_formulae//[[:space:]]/}" ]]; then
       echo "All Homebrew formulae are up to date."
       return 0
@@ -165,8 +169,19 @@ done
     printf '%s\n' "$outdated_formulae"
     echo ""
 
+    pinned_formulae_raw="$(brew list --pinned)" || return $?
+    if [[ -n "$pinned_formulae_raw" ]]; then
+      pinned_formulae=("${(@f)pinned_formulae_raw}")
+    fi
+
     while IFS= read -r formula; do
       [[ -n "$formula" ]] || continue
+
+      local formula_name="${formula##*/}"
+      if (( ${pinned_formulae[(Ie)$formula_name]} != 0 )); then
+        echo "Skipping pinned Homebrew formula: $formula"
+        continue
+      fi
 
       tap="$(homebrew_formula_tap "$formula" 2>/dev/null || true)"
       if [[ "$tap" == "homebrew/core" ]]; then
@@ -181,7 +196,7 @@ done
     if (( ${#core_formulae[@]} != 0 )); then
       echo "Upgrading Homebrew core formulae:"
       printf ' - %s\n' "${core_formulae[@]}"
-      brew upgrade --formula "${core_formulae[@]}"
+      brew upgrade --formula "${core_formulae[@]}" || upgrade_status=$?
     else
       echo "No outdated Homebrew core formulae."
     fi
@@ -191,7 +206,7 @@ done
       if all_updates_enabled; then
         echo "Upgrading third-party Homebrew formulae:"
         printf ' - %s\n' "${third_party_formulae[@]}"
-        brew upgrade --formula "${third_party_formulae[@]}"
+        brew upgrade --formula "${third_party_formulae[@]}" || upgrade_status=$?
       else
         echo "Skipped third-party Homebrew formulae:"
         printf ' - %s\n' "${third_party_formulae[@]}"
@@ -204,20 +219,21 @@ done
       if all_updates_enabled; then
         echo "Upgrading unclassified Homebrew formulae:"
         printf ' - %s\n' "${unclassified_formulae[@]}"
-        brew upgrade --formula "${unclassified_formulae[@]}"
+        brew upgrade --formula "${unclassified_formulae[@]}" || upgrade_status=$?
       else
         echo "Skipped unclassified Homebrew formulae:"
         printf ' - %s\n' "${unclassified_formulae[@]}"
         echo "Run update-software --all to include them."
       fi
     fi
+    return $upgrade_status
   }
 
   upgrade_homebrew_casks() {
     local outdated_casks=""
     local -a cask_list=()
 
-    outdated_casks="$(brew outdated --cask)"
+    outdated_casks="$(brew outdated --cask)" || return $?
     if [[ -z "${outdated_casks//[[:space:]]/}" ]]; then
       echo "All Homebrew casks are up to date."
       return 0
@@ -237,27 +253,30 @@ done
   }
 
   upgrade_homebrew() {
-    local trust_status=0
+    local upgrade_status=0
 
-    brew update
+    brew update || return $?
 
-    trust_homebrew_bundle_formulae || trust_status=$?
-    if (( trust_status != 0 )); then
+    trust_homebrew_bundle_formulae || upgrade_status=$?
+    if (( upgrade_status != 0 )); then
       echo "One or more Brewfile-scoped formulae could not be trusted; Homebrew may still require manual trust."
       echo ""
     fi
 
-    upgrade_homebrew_formulae
+    upgrade_homebrew_formulae || upgrade_status=$?
     echo ""
-    upgrade_homebrew_casks
+    upgrade_homebrew_casks || upgrade_status=$?
 
     if (( RUN_BREW_CLEANUP != 0 )); then
-      brew bundle cleanup --force --file="$BREWFILE"
+      brew bundle cleanup --force --file="$BREWFILE" || upgrade_status=$?
     else
       echo ""
       echo "Brewfile cleanup disabled by default; run update-software --cleanup to remove software not listed in $BREWFILE."
     fi
+    return $upgrade_status
   }
+
+  update_status=0
 
   # 1. Antigen
   if [[ -f "$HOME/.dotfiles/sources/terminal" ]]; then
@@ -365,7 +384,11 @@ done
       return 0
     fi
 
-    if ! sudo -v; then
+    local -a sudo_validate=(sudo -n -v)
+    if [[ -t 0 ]]; then
+      sudo_validate=(sudo -v)
+    fi
+    if ! "${sudo_validate[@]}"; then
       echo "Unable to authenticate sudo; skipping Mac App Store upgrades."
       return 1
     fi
@@ -473,7 +496,12 @@ done
     skip_step "Upgrading Copilot CLI" "npm not installed"
   fi
 
+  if (( update_status != 0 )); then
+    echo "One or more software update steps failed."
+  fi
+  (( update_status == 0 ))
 } 2>&1 | tee "$LOG"
+update_status=$?
 
 # Phase 2: Hand the captured output to Copilot for analysis and follow-ups.
 analyze_update_results() {
@@ -511,7 +539,7 @@ Known intentional behavior:
 Output:
 EOF
     cat "$LOG"
-  } | "$llm_wrapper" --no-log --no-stream -m "$analysis_model"
+  } | "$llm_wrapper" prompt --no-log --no-stream -m "$analysis_model"
 }
 
 echo ""
@@ -520,4 +548,7 @@ echo ""
 
 analysis_status=0
 analyze_update_results || analysis_status=$?
+if (( update_status != 0 )); then
+  exit "$update_status"
+fi
 exit "$analysis_status"
