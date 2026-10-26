@@ -21,6 +21,10 @@ Run `help` at any time to show the guide again, `help all` for the full implemen
 
 `com.jonmagic.brain-commit` supervises `bin/brain-commit --watch`, which waits five minutes between completed sync attempts rather than relying on deferrable launchd interval events. Failed attempts are logged and retried. It preserves Copilot session directories and indexed conversation history, and writes diagnostics to `~/Library/Logs/brain-commit.log`. After changing its LaunchAgent configuration, reload the job with `launchctl bootout gui/$(id -u)/com.jonmagic.brain-commit` followed by `launchctl bootstrap gui/$(id -u) ~/.dotfiles/bin/com.jonmagic.brain-commit.plist` and `launchctl kickstart gui/$(id -u)/com.jonmagic.brain-commit`. To pause synchronization, boot out the job; killing its process alone causes launchd to restart it.
 
+## T3 availability monitoring
+
+`com.jonmagic.t3-healthcheck` supervises `bin/t3-healthcheck --watch`. Every five minutes it requires the T3 background service to be running and T3 Connect to report that other devices can reach Wasp before checking in with Dead Man's Snitch. The machine-local snitch URL belongs at `~/.config/t3/deadmanssnitch-url` with mode `0600`; it must never be committed. Logs are written to `~/Library/Logs/t3-healthcheck.log`.
+
 ## Copilot CLI credentials
 
 `copilot` and `c` run through `bin/copilot`. On macOS, the wrapper first looks for a machine-local manifest at `${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/copilot-keychain-credentials`, then falls back to the repository manifest at `sources/copilot-keychain-credentials`. It passes declared credentials to the launched Copilot process through environment variables. The manifest is non-secret and uses this format:

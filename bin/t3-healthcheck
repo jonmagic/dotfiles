@@ -1,0 +1,64 @@
+#!/bin/bash
+# Verify the Wasp T3 service and remote relay before checking in with Dead Man's Snitch.
+set -uo pipefail
+
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin"
+
+INTERVAL_SECONDS=300
+SERVICE_LABEL="com.t3tools.t3code.service"
+SNITCH_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/t3/deadmanssnitch-url"
+
+log() {
+  printf '[%s] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"
+}
+
+check_once() {
+  local status
+  local snitch_url
+
+  if ! launchctl print "gui/$(id -u)/${SERVICE_LABEL}" 2>/dev/null |
+    grep -q $'state = running'; then
+    log "T3 service is not running."
+    return 1
+  fi
+
+  if ! status="$(t3 connect status 2>&1)"; then
+    log "T3 Connect status failed."
+    return 1
+  fi
+
+  if [[ "$status" != *"Other devices can reach this machine"* ]] ||
+    [[ "$status" != *"Tunnel connected"* ]]; then
+    log "T3 Connect is not externally reachable."
+    return 1
+  fi
+
+  if [ ! -f "$SNITCH_FILE" ]; then
+    log "Dead Man's Snitch URL is missing: $SNITCH_FILE"
+    return 1
+  fi
+
+  snitch_url="$(sed -n '1p' "$SNITCH_FILE" | tr -d '[:space:]')"
+  if [ -z "$snitch_url" ]; then
+    log "Dead Man's Snitch URL is empty."
+    return 1
+  fi
+
+  if ! curl -fsS --connect-timeout 5 --max-time 10 \
+    --data-urlencode "m=T3 Connect reachable from Wasp" \
+    "$snitch_url" >/dev/null; then
+    log "Dead Man's Snitch check-in failed."
+    return 1
+  fi
+
+  log "T3 service and remote relay are healthy."
+}
+
+if [ "${1:-}" = "--watch" ]; then
+  while :; do
+    check_once || true
+    sleep "$INTERVAL_SECONDS"
+  done
+fi
+
+check_once

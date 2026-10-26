@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.jonmagic.t3-healthcheck</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/jonmagic/.dotfiles/bin/t3-healthcheck</string>
+		<string>--watch</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/jonmagic</string>
+	</dict>
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+	<key>KeepAlive</key>
+	<true/>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/Users/jonmagic/Library/Logs/t3-healthcheck.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/jonmagic/Library/Logs/t3-healthcheck.log</string>
+</dict>
+</plist>
