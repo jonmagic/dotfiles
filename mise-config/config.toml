@@ -9,3 +9,7 @@ not_found_auto_install = false
 [tools]
 # Add global tools here with `mise use -g` once you're ready.
 # (Recommend starting with non-overlapping CLIs like ripgrep/ruff/etc.)
+
+[tool_alias.java.versions]
+"adoptopenjdk-11.0.15+10" = "temurin-11.0.15+10"
+"adoptopenjdk-11.0.31+11" = "temurin-11.0.31+11"
