@@ -33,6 +33,14 @@ echo "-> Installing homebrew packages"
 brew update
 brew bundle --file=~/.dotfiles/brew/Brewfile
 
+if ! gh cfs help >/dev/null 2>&1; then
+  echo "-> Installing the CFS GitHub CLI extension"
+  gh extension install github/gh-cfs --pin v0.3.0 || exit $?
+fi
+
+echo "-> Ensuring pinned Azure MCP is installed"
+"$DOTFILES_DIR/bin/ensure-azure-mcp" || exit $?
+
 if [[ -x /opt/homebrew/bin/llm ]]; then
   echo "-> Installing llm GitHub Copilot plugin"
   /opt/homebrew/bin/llm install --upgrade llm-github-copilot

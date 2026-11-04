@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Install Azure MCP from CFS into a fixed prefix, independent of mise's Node version.
+version=3.0.0
+prefix="$HOME/.local/share/dotfiles/npm"
+package_dir="$prefix/lib/node_modules/@azure/mcp"
+launcher="$prefix/bin/azmcp"
+
+installed() {
+  [[ -x "$launcher" ]] &&
+    node -e '
+      const pkg = require(process.argv[1]);
+      if (pkg.version !== process.argv[2]) process.exit(1);
+      require.resolve(`${pkg.name}-${process.platform}-${process.arch}`, {
+        paths: [require("path").dirname(process.argv[1])]
+      });
+    ' "$package_dir/package.json" "$version" 2>/dev/null
+}
+
+if ! command -v node >/dev/null || ! command -v npm >/dev/null; then
+  echo "Node.js >=22 and npm are required to install Azure MCP." >&2
+  exit 1
+fi
+
+if (( $(node -p 'process.versions.node.split(".")[0]') < 22 )); then
+  echo "Azure MCP requires Node.js >=22." >&2
+  exit 1
+fi
+
+if ! command -v gh >/dev/null || ! gh cfs help >/dev/null 2>&1; then
+  echo "gh-cfs is required to install Azure MCP; install the GitHub CLI extension github/gh-cfs first." >&2
+  exit 1
+fi
+
+if ! installed; then
+  gh cfs -- npm install -g --prefix "$prefix" --no-audit --no-fund "@azure/mcp@$version"
+  if ! installed; then
+    echo "Azure MCP $version or its native platform package is missing after installation." >&2
+    exit 1
+  fi
+fi
+
+echo "Azure MCP $version: $launcher"

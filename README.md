@@ -51,3 +51,9 @@ security add-generic-password \
 ```
 
 Keep `-w` last so the credential is prompted for rather than placed in shell history or process arguments. Work-only integrations and credentials do not belong in this personal repository. Non-macOS installations skip the Keychain integration.
+
+## Azure MCP
+
+`install-macos.sh` and `update-software` use `bin/ensure-azure-mcp` to install the first-party `@azure/mcp@3.0.0` npm package through `gh cfs`, not the Brewfile or a floating `npx` package. This requires Node.js 22 or later, npm, and Azure CLI authentication with CFS feed access. macOS setup installs the `github/gh-cfs` GitHub CLI extension pinned to v0.3.0 if it is missing. The installer fails visibly when a prerequisite or feed access is missing; it does not install from the public npm registry. It verifies the native platform package is present so the launcher does not need to fetch it at startup.
+
+The direct launcher is `$HOME/.local/share/dotfiles/npm/bin/azmcp` (on this Mac, `/Users/jonmagic/.local/share/dotfiles/npm/bin/azmcp`). Point the machine-local Copilot MCP server command there, retaining its `server start` arguments. The fixed prefix is independent of mise's Node versions and of `npm update -g` in `update-software --all`. Do not commit machine-local Copilot MCP settings or feed credentials.

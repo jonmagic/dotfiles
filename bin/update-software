@@ -299,6 +299,9 @@ done
     skip_step "Upgrading global npm packages" "npm not installed"
   fi
 
+  # 3a. Azure MCP has its own fixed prefix so blanket global updates cannot move its pin.
+  run_step "Ensuring pinned Azure MCP is installed" "$HOME/.dotfiles/bin/ensure-azure-mcp"
+
   # 4. mise packages
   if command -v mise &>/dev/null; then
     if (( SKIP_MISE != 0 )); then
