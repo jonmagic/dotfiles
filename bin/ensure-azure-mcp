@@ -34,7 +34,9 @@ if ! command -v gh >/dev/null || ! gh cfs help >/dev/null 2>&1; then
 fi
 
 if ! installed; then
-  gh cfs -- npm install -g --prefix "$prefix" --no-audit --no-fund "@azure/mcp@$version"
+  gh cfs -- npm install -g --prefix "$prefix" --no-audit --no-fund \
+    --registry=https://pkgs.dev.azure.com/github-cfs/GitHubCFS/_packaging/github-cfs-oss/npm/registry/ \
+    --replace-registry-host=npmjs "@azure/mcp@$version"
   if ! installed; then
     echo "Azure MCP $version or its native platform package is missing after installation." >&2
     exit 1

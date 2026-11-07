@@ -106,16 +106,37 @@ prompt_invocation() {
 }
 
 install_copilot_plugin() {
-  if copilot_plugin_installed; then
-    "$LLM_BIN" uninstall --yes llm-github-copilot
-  fi
-  "$LLM_BIN" install "$COPILOT_PLUGIN_SPEC"
+  install_copilot_plugin_from_cfs --reinstall-package llm-github-copilot
 }
 
 ensure_copilot_plugin() {
   if ! copilot_plugin_installed; then
-    "$LLM_BIN" install "$COPILOT_PLUGIN_SPEC"
+    install_copilot_plugin_from_cfs
   fi
+}
+
+install_copilot_plugin_from_cfs() {
+  local shebang llm_python
+
+  if ! command -v gh >/dev/null || ! command -v uv >/dev/null; then
+    echo "gh-cfs and uv are required to install the Copilot llm plugin; no public PyPI fallback." >&2
+    return 127
+  fi
+
+  if ! IFS= read -r shebang < "$LLM_BIN"; then
+    echo "Cannot read the Homebrew llm shebang from $LLM_BIN." >&2
+    return 1
+  fi
+  llm_python="${shebang#\#!}"
+  if [[ "$shebang" != '#!'* || "$llm_python" != /* || ! -x "$llm_python" ]]; then
+    echo "Cannot determine the Homebrew llm Python executable from $LLM_BIN." >&2
+    return 1
+  fi
+
+  gh cfs -- uv --no-config --no-cache --no-python-downloads pip install \
+    --python "$llm_python" \
+    --default-index https://pkgs.dev.azure.com/github-cfs/GitHubCFS/_packaging/github-cfs-pypi/pypi/simple/ \
+    "$@" "$COPILOT_PLUGIN_SPEC"
 }
 
 copilot_plugin_installed() {

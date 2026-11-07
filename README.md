@@ -17,6 +17,14 @@ The first local interactive terminal opened each day prints a workflow-focused c
 
 Run `help` at any time to show the guide again, `help all` for the full implementation inventory, `help <name>` for one command, or `help ollama` for on-demand Ollama service instructions.
 
+## Software update package sources
+
+`update-software` keeps its safe/default and `--all` lanes: Copilot CLI stays on `@github/copilot@prerelease`, and blanket global npm updates remain `--all` only. Both npm lanes use `gh cfs -- npm` with the explicit CFS npm registry and `replace-registry-host=npmjs`. Each lane captures `npm prefix -g` before CFS replaces npm's user/global configuration, retaining the active Node installation's global destination even when run from another project. Global operations do not consume that project's npm configuration or lockfile; no project lockfiles are migrated. Azure MCP retains its separate fixed prefix and pin with the same explicit feed routing.
+
+The `llm` plugin installer uses the existing `uv` executable through `gh cfs -- uv`, targeting the Python executable in Homebrew `llm`'s shebang. It disables ambient uv project configuration, cache reuse, and Python downloads, and selects only the CFS PyPI default index. The plugin itself remains pinned to GitHub commit `e4a37e2c8d105a7a26dea06569ea369c5862b42d`, an intentional direct Git source for Responses API support; its registry dependencies and build dependencies resolve through CFS. Upgrades reinstall only the plugin without first uninstalling the working copy.
+
+These lanes require an installed `gh-cfs`, an existing CFS login, and feed access; the Python lane also requires the already-managed `uv`. Missing prerequisites, authentication, or feed access fail visibly with no direct npm/PyPI fallback. Source configuration is not network-egress enforcement: direct Git sources and package build/lifecycle scripts remain separate trust boundaries. Changes affect future invocations, not updater functions already loaded by a running shell.
+
 ## Scheduled note synchronization
 
 `com.jonmagic.brain-commit` supervises `bin/brain-commit --watch`, which waits five minutes between completed sync attempts rather than relying on deferrable launchd interval events. Failed attempts are logged and retried. It preserves Copilot session directories and indexed conversation history, and writes diagnostics to `~/Library/Logs/brain-commit.log`. After changing its LaunchAgent configuration, reload the job with `launchctl bootout gui/$(id -u)/com.jonmagic.brain-commit` followed by `launchctl bootstrap gui/$(id -u) ~/.dotfiles/bin/com.jonmagic.brain-commit.plist` and `launchctl kickstart gui/$(id -u)/com.jonmagic.brain-commit`. To pause synchronization, boot out the job; killing its process alone causes launchd to restart it.

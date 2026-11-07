@@ -102,6 +102,24 @@ done
     [[ "$UPDATE_MODE" == "all" ]]
   }
 
+  update_global_npm() {
+    local npm_prefix=""
+
+    npm_prefix="$(npm prefix -g)" || return $?
+    if [[ -z "$npm_prefix" ]]; then
+      echo "Unable to determine the global npm prefix." >&2
+      return 1
+    fi
+    if ! command -v gh &>/dev/null; then
+      echo "gh-cfs is required for npm updates; no public registry fallback." >&2
+      return 127
+    fi
+
+    gh cfs -- npm "$@" --prefix "$npm_prefix" \
+      --registry=https://pkgs.dev.azure.com/github-cfs/GitHubCFS/_packaging/github-cfs-oss/npm/registry/ \
+      --replace-registry-host=npmjs --no-audit --no-fund
+  }
+
   deferred_step() {
     local name="$1"
     local reason="$2"
@@ -294,7 +312,7 @@ done
 
   # 3. Global npm packages
   if command -v npm &>/dev/null; then
-    deferred_step "Upgrading global npm packages" "blanket global npm updates are deferred by the safe default" npm update -g
+    deferred_step "Upgrading global npm packages" "blanket global npm updates are deferred by the safe default" update_global_npm update -g
   else
     skip_step "Upgrading global npm packages" "npm not installed"
   fi
@@ -494,7 +512,7 @@ done
 
   # 9. Copilot CLI (standalone npm install, not the gh extension)
   if command -v npm &>/dev/null; then
-    run_step "Upgrading Copilot CLI" npm install -g @github/copilot@prerelease
+    run_step "Upgrading Copilot CLI" update_global_npm install -g @github/copilot@prerelease
   else
     skip_step "Upgrading Copilot CLI" "npm not installed"
   fi
