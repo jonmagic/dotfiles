@@ -295,6 +295,8 @@ done
   }
 
   update_status=0
+  echo "Update mode: $UPDATE_MODE"
+  echo ""
 
   # 1. Antigen
   if [[ -f "$HOME/.dotfiles/sources/terminal" ]]; then
@@ -379,6 +381,7 @@ done
     fi
 
     while IFS= read -r app_line; do
+      app_line="${app_line#"${app_line%%[![:space:]]*}"}"
       [[ "$app_line" == <->\ * ]] || continue
       outdated_app_lines+=("$app_line")
     done <<< "$outdated_apps"
@@ -536,6 +539,7 @@ analyze_update_results() {
 
   # Avoid creating a nested Copilot CLI session, which also loads lifecycle hooks.
   {
+    printf 'Invocation update mode: %s\n\n' "$UPDATE_MODE"
     cat <<'EOF'
 Here is the output from my software update script. Please:
 1. Summarize what was updated, what was already up to date, and what was skipped.
@@ -552,6 +556,20 @@ Known intentional behavior:
   core formulae, mise, and Mac App Store apps, while
   deferring broad non-Copilot plugin, package, third-party Homebrew,
   unclassified Homebrew, and cask updates.
+- Only describe those lanes as deferred when the invocation update mode is
+  safe. In all mode, those lanes ran and must not be reported as deferred.
+- The initial `mas outdated` list is inventory, not proof that each app was
+  updated. Count an app as updated only when its `Updating ...` entry is
+  followed by a successful upgrade; skipped apps were not updated.
+- npm `install-scripts` notices are trust warnings, not evidence of broken
+  packages. Do not recommend allowing scripts unless the output contains an
+  actual related failure; leave scripts blocked by default.
+- A newer mise tool outside the configured version range is informational, not
+  a failed update or automatic follow-up. Major runtime changes can switch the
+  active global package set and require a separately reviewed migration.
+- For deprecated transitive npm dependencies, recommend identifying the direct
+  parent. Do not recommend replacing a current top-level package without an
+  available upstream fix.
 - Deferred safe-mode lanes are not failures. Suggest update-software --all only
   when the user intentionally wants the broader update pass.
 - Brewfile cleanup is destructive and intentionally opt-in with
