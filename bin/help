@@ -12,7 +12,7 @@ QUERY=""
 
 usage() {
   cat <<'EOF'
-Usage: help [all|aliases|functions|scripts|ollama|command-name] [--plain]
+Usage: help [all|aliases|functions|scripts|command-name] [--plain]
 
 Without arguments, prints the workflow-focused dotfiles command guide.
 EOF
@@ -80,7 +80,6 @@ script_override_description() {
     fixorb) printf '%s\n' "Repair OrbStack when it is stuck in Starting" ;;
     help) printf '%s\n' "Show the dotfiles command guide" ;;
     llm) printf '%s\n' "Run a single-shot GitHub Copilot prompt through llm" ;;
-    ollama-service) printf '%s\n' "Manage the on-demand Ollama launchd service" ;;
     path) printf '%s\n' "Print PATH entries one per line" ;;
     repo) printf '%s\n' "Open the current repo origin in a browser" ;;
     splunk-mcp-service) printf '%s\n' "Run the long-lived Splunk MCP watchdog service" ;;
@@ -243,7 +242,7 @@ collect_script_records() {
 
 print_header() {
   printf '%s%sDotfiles command guide%s\n' "$BLUE" "$BOLD" "$RESET"
-  printf '%s  help all | help <name> | help ollama%s\n' "$DIM" "$RESET"
+  printf '%s  help all | help <name>%s\n' "$DIM" "$RESET"
   printf '\n'
 }
 
@@ -282,11 +281,6 @@ print_section() {
 append_named_record() {
   local name="$1"
   local section_file="$2"
-
-  if [[ "$name" == "ollama" ]]; then
-    printf 'topic\tollama\tLoad local Ollama service instructions when needed\thelp ollama\thelp\n' >>"$section_file"
-    return 0
-  fi
 
   awk -F '\t' -v name="$name" '
     tolower($2) == tolower(name) {
@@ -339,7 +333,6 @@ print_workflows() {
   print_workflow_section "Repo work" flow repo commit
   print_workflow_section "Meetings and brain" am
   print_workflow_section "Remote machines" fixorb wasp wasp-put
-  print_workflow_section "On-demand instructions" ollama
   printf '%s  Use help all for the full source inventory, including under-the-hood helpers.%s\n' "$DIM" "$RESET"
 }
 
@@ -348,16 +341,6 @@ print_all() {
   print_section "alias" "ALIASES"
   print_section "function" "FUNCTIONS"
   print_section "script" "SCRIPTS"
-}
-
-print_ollama_help() {
-  printf '%s%sOllama%s\n' "$BLUE" "$BOLD" "$RESET"
-  printf '  %swhen:%s On-demand local model service, not a regular daily command.\n' "$DIM" "$RESET"
-  printf '  %sstatus:%s ollama-service status\n' "$DIM" "$RESET"
-  printf '  %sstart:%s  ollama-service start\n' "$DIM" "$RESET"
-  printf '  %sstop:%s   ollama-service stop\n' "$DIM" "$RESET"
-  printf '  %slogs:%s   ollama-service log\n' "$DIM" "$RESET"
-  printf '\n'
 }
 
 print_match() {
@@ -398,9 +381,6 @@ case "$QUERY_LOWER" in
     ;;
   workflow|workflows)
     print_workflows
-    ;;
-  ollama )
-    print_ollama_help
     ;;
   alias|aliases)
     print_header

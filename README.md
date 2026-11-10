@@ -15,7 +15,7 @@ The first local interactive terminal opened each day prints a workflow-focused c
 - `sources/functions.zsh`
 - executable scripts in `bin/`
 
-Run `help` at any time to show the guide again, `help all` for the full implementation inventory, `help <name>` for one command, or `help ollama` for on-demand Ollama service instructions.
+Run `help` at any time to show the guide again, `help all` for the full implementation inventory, or `help <name>` for one command.
 
 ## Software update package sources
 
