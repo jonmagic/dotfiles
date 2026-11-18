@@ -18,9 +18,13 @@ fi
 # Archive meeting
 if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
   am() {
-    local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-github_copilot/gpt-5.6-sol}"
+    local archive_meeting_model="${ARCHIVE_MEETING_MODEL:-}"
+    local archive_meeting_model_args=()
     local archive_meeting_reasoning_effort="${ARCHIVE_MEETING_REASONING_EFFORT:-}"
     local archive_meeting_reasoning_args=()
+    if [ -n "$archive_meeting_model" ]; then
+      archive_meeting_model_args=(--model "$archive_meeting_model")
+    fi
     if [ -n "$archive_meeting_reasoning_effort" ]; then
       archive_meeting_reasoning_args=(--reasoning-effort "$archive_meeting_reasoning_effort")
     fi
@@ -28,7 +32,7 @@ if executable_exists "$HOME/code/jonmagic/scripts/bin/archive-meeting"; then
       --brain-dir ~/Brain \
       --executive-summary-prompt-path ~/code/jonmagic/prompts/summarize/zoom-transcript-executive-summary.md \
       --detailed-notes-prompt-path ~/code/jonmagic/prompts/summarize/transcript-meeting-notes.md \
-      --model "$archive_meeting_model" \
+      "${archive_meeting_model_args[@]}" \
       "${archive_meeting_reasoning_args[@]}" \
       "$@"
   }
