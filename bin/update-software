@@ -529,15 +529,16 @@ update_status=$?
 
 # Phase 2: Hand the captured output to Copilot for analysis and follow-ups.
 analyze_update_results() {
-  local llm_wrapper="$HOME/.dotfiles/bin/llm"
-  local analysis_model="${UPDATE_SOFTWARE_ANALYSIS_MODEL:-${LLM_COPILOT_MODEL:-github_copilot/gpt-5.6-sol}}"
+  local copilot_bin=""
+  local analysis_model="${UPDATE_SOFTWARE_ANALYSIS_MODEL:-auto}"
 
-  if [[ ! -x "$llm_wrapper" ]]; then
-    echo "Copilot analysis wrapper not found at $llm_wrapper." >&2
+  copilot_bin="$(command -v copilot 2>/dev/null || true)"
+  if [[ -z "$copilot_bin" ]]; then
+    echo "Copilot CLI not found on PATH." >&2
     return 127
   fi
 
-  # Avoid creating a nested Copilot CLI session, which also loads lifecycle hooks.
+  # Keep the analysis isolated from repository instructions and tool side effects.
   {
     printf 'Invocation update mode: %s\n\n' "$UPDATE_MODE"
     cat <<'EOF'
@@ -578,7 +579,12 @@ Known intentional behavior:
 Output:
 EOF
     cat "$LOG"
-  } | "$llm_wrapper" prompt --no-log --no-stream -m "$analysis_model"
+  } | "$copilot_bin" \
+    --model "$analysis_model" \
+    --no-custom-instructions \
+    --disable-builtin-mcps \
+    --available-tools \
+    --log-level error
 }
 
 echo ""
